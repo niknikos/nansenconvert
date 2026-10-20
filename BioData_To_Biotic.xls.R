@@ -17,6 +17,7 @@ library(tibble)
 library(bslib)
 library(tools)
 library(later)
+if (!exists("sex_nansen", mode = "function")) source(file.path("helpers", "code_lists.R"), local = TRUE)
 
 # --- 0.bis Locate the application folder ---
 APP_DIR <- local({
@@ -1367,17 +1368,8 @@ indiv_standardize_df <- function(df, required_norm, mapping_list) {
   list(df = df, missing = missing)
 }
 
-indiv_map_sexe_export <- function(x) {
-  v <- toupper(trimws(as.character(x)))
-  out <- rep(NA_real_, length(v))
-  out[v == "M"] <- 1
-  out[v == "F"] <- 2
-  out[v == "I"] <- NA_real_
-  num_ok <- suppressWarnings(as.numeric(v))
-  na_mask <- is.na(out) & !is.na(num_ok)
-  out[na_mask] <- num_ok[na_mask]
-  out
-}
+# NMD sex codes: 1 = Female, 2 = Male (the old mapping had them swapped)
+indiv_map_sexe_export <- function(x) sex_nansen(x)
 
 mod_individuals_ui <- function(id) {
   ns <- NS(id)
