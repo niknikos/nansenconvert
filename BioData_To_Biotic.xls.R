@@ -18,6 +18,7 @@ library(bslib)
 library(tools)
 library(later)
 if (!exists("sex_nansen", mode = "function")) source(file.path("helpers", "code_lists.R"), local = TRUE)
+if (!exists("taxonomy_reference", mode = "function")) source(file.path("helpers", "taxonomy.R"), local = TRUE)
 
 # --- 0.bis Locate the application folder ---
 APP_DIR <- local({
@@ -44,55 +45,10 @@ APP_DIR <- local({
   cand[nzchar(cand)][1]
 })
 
-# WoRMS / species helpers (inlined; formerly species_worms.R)
-worms_guess_data_path <- function(app_dir) {
-  names_try <- c("WoRMS.xlsx", "WorMS.xlsx", "worms.xlsx", "WoRMS.csv", "WorMS.csv", "worms.csv")
-  bases <- unique(c(
-    file.path(app_dir, "data"),
-    file.path(getwd(), "data"),
-    "data"
-  ))
-  candidates <- as.vector(outer(bases, names_try, file.path))
-  candidates[file.exists(candidates)][1]
-}
-
-#' Loads the WoRMS reference list; returns NULL if it is missing or unreadable
-worms_read_reference <- function(app_dir) {
-  path <- worms_guess_data_path(app_dir)
-  if (is.na(path) || !nzchar(path)) {
-    return(NULL)
-  }
-  ext <- tolower(tools::file_ext(path))
-  w <- tryCatch(
-    if (ext == "csv") {
-      readr::read_csv(path, na = c("", "NA"), show_col_types = FALSE)
-    } else {
-      readxl::read_excel(path)
-    },
-    error = function(e) NULL
-  )
-  if (is.null(w) || !is.data.frame(w) || !ncol(w)) {
-    return(NULL)
-  }
-  nms <- names(w) %>%
-    stringi::stri_trans_general("Latin-ASCII") %>%
-    tolower() %>%
-    gsub("[^a-z0-9_]+", "_", .) %>%
-    gsub("_+", "_", .) %>%
-    gsub("^_|_$", "", .)
-  names(w) <- nms
-  if (!"scientificname" %in% names(w)) {
-    alts <- c("scientific_name", "valid_name", "name")
-    h <- alts[alts %in% names(w)][1]
-    if (is.na(h)) {
-      return(NULL)
-    }
-    names(w)[names(w) == h] <- "scientificname"
-  }
-  w$scientificname <- trimws(as.character(w$scientificname))
-  w <- w[nzchar(w$scientificname) & !is.na(w$scientificname), , drop = FALSE]
-  w
-}
+# WoRMS / species helpers
+#' The taxonomy reference: nansentaxonomy (EAF-Nansen taxonomy built from
+#' WoRMS) replaces the old bundled WorMS.xlsx. app_dir is no longer used.
+worms_read_reference <- function(app_dir = NULL) taxonomy_reference()
 
 norm_col_slug <- function(x) {
   v <- as.character(x)
@@ -955,7 +911,8 @@ mod_catchsamples_ui <- function(id) {
                        div(class = "card-header h5 bg-success text-white", icon("file-export", class = "me-2"), "2. Export results"),
                        div(class = "card-body",
                            downloadButton(ns("downloadData"), "📄 Download the edited catches sheet", class = "btn-primary mb-2", style = "width: 100%;"),
-                           downloadButton(ns("downloadCatchsamples"), "📦 Download Catchsamples_LPA", class = "btn-success", style = "width: 100%;")
+                           downloadButton(ns("downloadCatchsamples"), "📦 Download Catchsamples_LPA", class = "btn-success", style = "width: 100%;"),
+                           uiOutput(ns("worms_session_ui"))
                        )
                    )
       ),
@@ -977,7 +934,9 @@ mod_catchsamples_server <- function(id) {
                                               cs_catchproducttype = "producttype"))
     rv_c <- shiny::reactiveValues(
       df = NULL, espece_file = NULL, sp_remap = character(0),
-      solved_session = 0L, err_import = NULL
+      solved_session = 0L, err_import = NULL,
+      worms_session = NULL,   # names confirmed in WoRMS this session: name, aphia, ...
+      worms_check = NULL      # last online WoRMS check (data.frame or message)
     )
     wormsData <- shiny::reactive({
       worms_read_reference(APP_DIR)
@@ -1029,7 +988,7 @@ mod_catchsamples_server <- function(id) {
       widx <- widx_c()
       if (is.null(wdf) || !nrow(wdf) || is.null(widx) || !nrow(widx)) {
         showNotification(
-          "WoRMS file missing or unreadable: species validation is limited. Put a WoRMS file (CSV/xlsx) in the data/ folder.",
+          "Taxonomy (nansentaxonomy) unavailable: species are not checked. Install or update nansentaxonomy.",
           type = "warning",
           duration = 8
         )
@@ -1061,7 +1020,10 @@ mod_catchsamples_server <- function(id) {
         function() {
           u <- unique(stats::na.omit(as.character(d0_l$espece)))
           m <- match_vector_to_worms(u, widx_l, scientificname_full = wdf_l$scientificname)
-          um <- u[!m$matched & nzchar(u)]
+          # Names the nansentaxonomy crosswalk resolves (recorded variants,
+          # curated overrides) need no correction either
+          resolved <- !is.na(taxonomy_resolve(u)$aphia)
+          um <- u[!m$matched & !resolved & nzchar(u)]
           if (length(um) == 0) {
             removeModal(session = session)
             rv_c$df <- d0_l
@@ -1069,6 +1031,7 @@ mod_catchsamples_server <- function(id) {
             rv_c$sp_remap <- character(0)
             return()
           }
+          sugg <- taxonomy_suggest(um)
           ch_choices <- tryCatch(
             worms_select_choices(wdf_l$scientificname),
             error = function(e) NULL
@@ -1079,17 +1042,19 @@ mod_catchsamples_server <- function(id) {
             rv_c$espece_file <- d0_l$espece_fichier
             rv_c$sp_remap <- character(0)
             showNotification(
-              "Could not prepare the WoRMS list: check the reference file in data/.",
+              "Could not prepare the species list from nansentaxonomy.",
               type = "error", duration = 8
             )
             return()
           }
           showModal(
             modalDialog(
-              title = "Species not found in WoRMS — Catchsamples_LPA",
+              title = "Species not in the taxonomy — Catchsamples_LPA",
               p(
-                "Some species are not in the reference list. Type the start of a WoRMS ", tags$em("scientificname"), " below to filter the (long) list.",
-                " The first option, \"keep the imported name\", does not attach the taxonomic record.",
+                "Some species are not in the EAF-Nansen taxonomy (nansentaxonomy). Type the start of a ",
+                tags$em("scientificname"), " below to filter the list; likely typos are pre-selected.",
+                " The first option, \"keep the imported name\", leaves the species without an aphia code,",
+                " which NMDBiotic requires. \"Check these names in WoRMS\" looks them up online.",
                 class = "small text-muted"
               ),
               tagList(
@@ -1097,10 +1062,13 @@ mod_catchsamples_server <- function(id) {
                   seq_along(um),
                   function(i) {
                     uu <- um[i]
+                    s <- sugg[[uu]]
                     selectizeInput(
                       inputId = ns(paste0("catch_worm_", i)),
-                      label = tagList(strong(htmltools::htmlEscape(uu)), " — WoRMS (scientificname):"),
+                      label = tagList(strong(htmltools::htmlEscape(uu)), " — scientificname:",
+                                      if (!is.na(s)) span(class = "text-success small", " (suggested: ", s, ")")),
                       choices = ch_choices,
+                      selected = if (!is.na(s)) s else "",
                       width = "100%",
                       options = list(
                         placeholder = "Type to filter (e.g. Sardin, Liza)…",
@@ -1111,7 +1079,10 @@ mod_catchsamples_server <- function(id) {
                   }
                 )
               ),
+              uiOutput(ns("catch_worms_check_ui")),
               footer = tagList(
+                actionButton(ns("catch_worms_online"), "Check these names in WoRMS", icon = icon("globe"),
+                             class = "btn btn-outline-primary"),
                 actionButton(ns("catch_worms_apply"), "Apply replacements", class = "btn btn-primary"),
                 actionButton(
                   ns("catch_worms_skip"), "Continue without corrections (all)", class = "btn btn-outline-secondary"
@@ -1124,8 +1095,83 @@ mod_catchsamples_server <- function(id) {
           )
           session$userData$catch_um <- um
           session$userData$catch_d0 <- d0_l
+          session$userData$catch_choices <- ch_choices
+          rv_c$worms_check <- NULL
         },
         delay = 0.08
+      )
+    })
+
+    # Online WoRMS check of the names still unresolved in the dialog. A name
+    # WoRMS recognises is pre-selected under its currently accepted name; its
+    # AphiaID is kept for this session (and can be exported for nansentaxonomy).
+    observeEvent(input$catch_worms_online, {
+      um <- session$userData$catch_um
+      req(length(um))
+      withProgress(message = "Checking names in WoRMS…", value = 0.3, {
+        res <- taxonomy_check_worms(um)
+      })
+      rv_c$worms_check <- res
+      if (is.character(res) || !nrow(res)) return()
+      known <- tolower(taxonomy_reference()$scientificname)
+      ch <- session$userData$catch_choices
+      add <- list()
+      for (i in seq_along(um)) {
+        r <- res[res$query == um[i], , drop = FALSE]
+        if (!nrow(r) || !r$worms_status[1] %in% c("matched", "fuzzy") || is.na(r$valid_name[1])) next
+        vn <- r$valid_name[1]
+        if (!tolower(vn) %in% known) {
+          add[[length(add) + 1]] <- data.frame(
+            name = vn, aphia = as.character(r$valid_AphiaID[1]), recorded_as = um[i],
+            worms_status = r$worms_status[1], note = if ("note" %in% names(r)) r$note[1] else NA_character_,
+            stringsAsFactors = FALSE
+          )
+          ch <- c(ch, stats::setNames(vn, paste(vn, "(WoRMS)")))
+        }
+        updateSelectizeInput(session, paste0("catch_worm_", i), choices = ch, selected = vn,
+                             server = FALSE)
+      }
+      if (length(add)) {
+        new <- do.call(rbind, add)
+        old <- rv_c$worms_session
+        rv_c$worms_session <- unique(rbind(old, new))
+      }
+    })
+
+    output$catch_worms_check_ui <- renderUI({
+      res <- rv_c$worms_check
+      if (is.null(res)) return(NULL)
+      if (is.character(res)) return(div(class = "alert alert-warning small mt-2", res))
+      if (!nrow(res)) return(NULL)
+      tagList(
+        h6(class = "mt-3", "WoRMS check"),
+        tableOutput(ns("catch_worms_check_tbl")),
+        p(class = "small text-muted",
+          "Recognised names are pre-selected under their accepted name. Unmatched names need a manual choice.")
+      )
+    })
+    output$catch_worms_check_tbl <- renderTable({
+      res <- rv_c$worms_check
+      req(is.data.frame(res), nrow(res))
+      keep <- intersect(c("query", "worms_status", "valid_name", "valid_AphiaID", "note"), names(res))
+      res[, keep, drop = FALSE]
+    }, striped = TRUE, spacing = "xs")
+
+    output$dl_worms_session <- downloadHandler(
+      filename = function() paste0("new_taxa_for_nansentaxonomy_", Sys.Date(), ".csv"),
+      content = function(file) {
+        ws <- rv_c$worms_session
+        if (is.null(ws)) ws <- data.frame(name = character(0))
+        taxonomy_new_names_csv(ws, file)
+      }
+    )
+    output$worms_session_ui <- renderUI({
+      ws <- rv_c$worms_session
+      if (is.null(ws) || !nrow(ws)) return(NULL)
+      div(class = "mt-2",
+        p(class = "small", strong(nrow(ws)), " name(s) confirmed in WoRMS are not yet in nansentaxonomy."),
+        downloadButton(ns("dl_worms_session"), "Download them for nansentaxonomy (CSV)",
+                       class = "btn-outline-secondary btn-sm w-100")
       )
     })
     observeEvent(input$catch_worms_apply, {
@@ -1206,23 +1252,22 @@ mod_catchsamples_server <- function(id) {
         dplyr::group_by(serialnumber) %>%
         dplyr::mutate(catchsampleid = dplyr::row_number()) %>%
         dplyr::ungroup()
-      if (is.null(wraw) || !nrow(wraw)) {
-        wj <- tibble::tibble(
-          scientificname = wselect$scientificname,
-          aphia = NA, class = NA, family = NA, catchcategory = NA
-        )
-        out <- wselect
-      } else {
-        wj <- wraw
-        sn <- stringi::stri_trans_general(names(wj), "Latin-ASCII") %>% tolower() %>%
-          gsub("[^a-z0-9_]+", "_", .) %>% gsub("_+", "_", .) %>% gsub("^_|_$", "", .)
-        names(wj) <- sn
-        needj <- c("scientificname", "aphia", "class", "family", "catchcategory")
-        for (c in setdiff(needj, names(wj))) wj[[c]] <- NA
-        wj <- wj[, intersect(union(needj, names(wj)), names(wj)), drop = FALSE]
-        wj <- wj[, needj, drop = FALSE]
-        out <- wselect %>% dplyr::left_join(wj, by = "scientificname")
+      # aphia (AphiaID) and catchcategory (ITIS TSN) from the nansentaxonomy
+      # crosswalk, which also knows recorded variants and curated overrides
+      out <- wselect
+      ids <- taxonomy_resolve(out$scientificname)
+      out$aphia <- ids$aphia
+      out$catchcategory <- ids$catchcategory
+      # Names confirmed in WoRMS during this session (not yet in nansentaxonomy)
+      ws <- rv_c$worms_session
+      if (!is.null(ws) && nrow(ws)) {
+        i <- match(tolower(out$scientificname), tolower(ws$name))
+        fill <- is.na(out$aphia) & !is.na(i)
+        out$aphia[fill] <- ws$aphia[i[fill]]
       }
+      hit <- match(tolower(out$scientificname), tolower(wraw$scientificname))
+      out$class <- wraw$class[hit]
+      out$family <- wraw$family[hit]
       out <- out %>%
         dplyr::select(-dplyr::any_of(c("espece_fichier", "espece_pre_map")))
       out %>%
@@ -1285,7 +1330,7 @@ mod_catchsamples_server <- function(id) {
         return(
           div(
             class = "d-flex flex-wrap align-items-center gap-3 small mb-2 p-2 rounded border text-muted",
-            "WoRMS reference not loaded: species status is unavailable (put the file in data/)."
+            "Taxonomy (nansentaxonomy) not loaded: species status is unavailable."
           )
         )
       }
@@ -1737,7 +1782,7 @@ mod_individuals_server <- function(id) {
       }
       if (is.null(widx) || !nrow(widx)) {
         showNotification(
-          "WoRMS file unavailable (data/ folder): length-frequency species check skipped for Individuals.",
+          "Taxonomy (nansentaxonomy) unavailable: length-frequency species check skipped for Individuals.",
           type = "warning", duration = 6
         )
         rv$indiv_worms_solved_fq_fp <- fp
@@ -1792,7 +1837,7 @@ mod_individuals_server <- function(id) {
             rv$indiv_worms_awaiting <- FALSE
             rv$indiv_worms_solved_fq_fp <- fp_l
             showNotification(
-              "Could not prepare the WoRMS list: check the reference file in data/.",
+              "Could not prepare the species list from nansentaxonomy.",
               type = "error", duration = 8
             )
             return()
@@ -1860,7 +1905,7 @@ mod_individuals_server <- function(id) {
       }
       if (is.null(widx) || !nrow(widx)) {
         showNotification(
-          "WoRMS file unavailable (data/ folder): biology species check skipped for Individuals.",
+          "Taxonomy (nansentaxonomy) unavailable: biology species check skipped for Individuals.",
           type = "warning", duration = 6
         )
         rv$indiv_worms_solved_bio_fp <- fp
@@ -1915,7 +1960,7 @@ mod_individuals_server <- function(id) {
             rv$indiv_worms_awaiting <- FALSE
             rv$indiv_worms_solved_bio_fp <- fp_l
             showNotification(
-              "Could not prepare the WoRMS list: check the reference file in data/.",
+              "Could not prepare the species list from nansentaxonomy.",
               type = "error", duration = 8
             )
             return()
@@ -2029,7 +2074,7 @@ mod_individuals_server <- function(id) {
         return(
           div(
             class = "small text-muted mb-2",
-            "WoRMS: reference list not loaded (data/ folder)."
+            "Taxonomy (nansentaxonomy) not loaded."
           )
         )
       }
