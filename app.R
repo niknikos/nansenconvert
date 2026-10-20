@@ -43,6 +43,11 @@ load_app <- function(path) {
   list(ui = env$ui, server = env$server, env = env)
 }
 
+# Shared helpers (code lists, taxonomy, validation) used by the converters
+for (f in sort(list.files(file.path(app_dir, "helpers"), pattern = "[.]R$", full.names = TRUE))) {
+  source(f, local = FALSE)
+}
+
 apps <- lapply(app_files, function(f) load_app(file.path(app_dir, f)))
 names(apps) <- names(app_files)
 
@@ -237,6 +242,7 @@ main_ui <- navbarPage(
   tabPanel("Biotic.xls_To_Biotic.xml",     apps[["Biotic.xls_To_Biotic.xml"]]$ui),
   tabPanel("NASC.xls_To_Acoustic.xml",     apps[["NASC.xls_To_Acoustic.xml"]]$ui),
   tabPanel("Acoustic.xls_To_Acoustic.xml", apps[["Acoustic.xls_To_Acoustic.xml"]]$ui),
+  tabPanel("Code lists", code_lists_ui("code_lists")),
   tabPanel("Excel file templates", ui_excel_files_model()),
   tabPanel("User_Guide",
     fluidPage(
@@ -260,6 +266,9 @@ server <- function(input, output, session) {
     shinyjs::hide("app_splash", anim = TRUE, animType = "fade", time = 0.35)
     shinyjs::removeClass(id = "app_main_wrapper", class = "splash-active")
   }, ignoreInit = TRUE)
+
+  # Code lists shared by every converter (session$userData$code_lists)
+  code_lists_server("code_lists", code_lists_get(session))
 
   for (nm in names(apps)) {
     srv <- apps[[nm]]$server

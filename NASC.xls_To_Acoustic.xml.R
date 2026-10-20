@@ -324,8 +324,12 @@ ui <- fluidPage(
       h4("Metadata"),
       textInput("md_report_time",   "report_time",      value = ""),
       textInput("md_lsss_version",  "lsss_version",     value = ""),
-      textInput("md_nation",        "nation",           value = ""),
-      textInput("md_platform",      "platform (integer code)", value = ""),
+      selectizeInput("md_nation",   "nation (code)",
+                     choices = code_list_choices("nation", code_lists_default()),
+                     options = list(create = TRUE, placeholder = "Choose or type a code")),
+      selectizeInput("md_platform", "platform (integer code)",
+                     choices = code_list_choices("platform", code_lists_default()),
+                     options = list(create = TRUE, placeholder = "Choose or type a code")),
       textInput("md_cruise",        "cruise",           value = ""),
       tags$hr(),
 
@@ -398,8 +402,13 @@ server <- function(input, output, session) {
     )
   }
 
+  # Code lists shared with the other converters (Nansen or Custom)
+  cl <- code_lists_get(session)
+
   apply_nasc_staged <- function(df_staged) {
-    res <- build_lpa_from_nasc_staged(df_staged, nasc_md(input), nasc_settings(input))
+    s <- nasc_settings(input)
+    acocat_map <- acocat_map_for(unique(df_staged$Species_name), cl$lists, s$acocat_level)
+    res <- build_lpa_from_nasc_staged(df_staged, nasc_md(input), s, acocat_map = acocat_map)
     rv$nasc_raw       <- res$nasc_raw
     rv$nasc_processed <- res$nasc_processed
     rv$lpa_sheets     <- res$lpa_sheets
@@ -413,7 +422,8 @@ server <- function(input, output, session) {
       input$md_platform, input$md_cruise,
       input$set_freq, input$set_transceiver, input$set_threshold,
       input$set_pel_ch_thickness, input$set_upper_interpret_depth,
-      input$set_lower_integrator_depth, input$set_acocat_level
+      input$set_lower_integrator_depth, input$set_acocat_level,
+      cl$lists
     ),
     {
       req(rv$nasc_staged)
@@ -421,6 +431,16 @@ server <- function(input, output, session) {
     },
     ignoreInit = TRUE
   )
+
+  # Nation and platform choices follow the active code lists
+  observeEvent(cl$lists, {
+    for (id in c("nation", "platform")) {
+      inp <- paste0("md_", id)
+      updateSelectizeInput(session, inp, choices = code_list_choices(id, cl$lists),
+                           selected = isolate(input[[inp]]),
+                           options = list(create = TRUE, placeholder = "Choose or type a code"))
+    }
+  }, ignoreInit = TRUE)
 
   # Flags that show the previews
   show_nasc_preview <- reactiveVal(FALSE)

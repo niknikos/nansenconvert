@@ -594,16 +594,41 @@ station_dist_nmi <- function(lat1, lon1, lat2, lon2) {
 }
 
 #' Station values that are not in the stations file (editable in the
-#' Fishstations_LPA tab). Codes follow the NMD reference lists.
+#' Fishstations_LPA tab). Codes come from the active code lists.
 STATION_DEFAULTS <- list(
   nation               = "",
   area                 = "",
   gear                 = "3500",
   gearcount            = 1,
   haulvalidity         = "1",
+  stationtype          = "",
   trawldoorspread      = 15,
   verticaltrawlopening = 50
 )
+# Station defaults chosen from a code list: input id -> code list id
+STATION_CODE_INPUTS <- c(st_nation = "nation", st_gear = "gear",
+                         st_haulvalidity = "haulvalidity", st_stationtype = "fishstationtype")
+
+# Selectize for a coded default; choices follow the active code list
+code_select_input <- function(inputId, label, list_id, selected = "") {
+  selectizeInput(inputId, label, choices = code_list_choices(list_id, code_lists_default()),
+                 selected = selected,
+                 options = list(create = TRUE, placeholder = "Choose or type a code"))
+}
+
+# A chosen code, or NA when nothing is chosen
+code_default <- function(x) if (is.null(x) || is.na(x) || !nzchar(trimws(x))) NA_character_ else trimws(x)
+
+# Keeps a set of coded selectize inputs in step with the code lists
+observe_code_inputs <- function(session, input, cl, inputs) {
+  observeEvent(cl$lists, {
+    for (inp in names(inputs)) {
+      updateSelectizeInput(session, inp, choices = code_list_choices(inputs[[inp]], cl$lists),
+                           selected = isolate(input[[inp]]),
+                           options = list(create = TRUE, placeholder = "Choose or type a code"))
+    }
+  }, ignoreInit = TRUE)
+}
 
 # --- 1. Main theme ---
 theme_modern <- bs_theme(
@@ -637,11 +662,12 @@ mod_fishstations_ui <- function(id) {
             hr(),
             tags$h5(icon("sliders"), strong("Station defaults")),
             helpText("Applied to every station. Leave a field empty to omit it from the XML."),
-            textInput(ns("st_nation"), "nation (NMD nation code)", value = STATION_DEFAULTS$nation),
-            textInput(ns("st_area"), "area (NMD area code)", value = STATION_DEFAULTS$area),
-            textInput(ns("st_gear"), "gear (NMD gear code)", value = STATION_DEFAULTS$gear),
+            code_select_input(ns("st_nation"), "nation", "nation", STATION_DEFAULTS$nation),
+            textInput(ns("st_area"), "area (code)", value = STATION_DEFAULTS$area),
+            code_select_input(ns("st_gear"), "gear", "gear", STATION_DEFAULTS$gear),
             numericInput(ns("st_gearcount"), "gearcount", value = STATION_DEFAULTS$gearcount, min = 1),
-            textInput(ns("st_haulvalidity"), "haulvalidity (code)", value = STATION_DEFAULTS$haulvalidity),
+            code_select_input(ns("st_haulvalidity"), "haulvalidity", "haulvalidity", STATION_DEFAULTS$haulvalidity),
+            code_select_input(ns("st_stationtype"), "stationtype", "fishstationtype", STATION_DEFAULTS$stationtype),
             numericInput(ns("st_trawldoorspread"), "trawldoorspread (m)", value = STATION_DEFAULTS$trawldoorspread),
             numericInput(ns("st_verticaltrawlopening"), "verticaltrawlopening (m)", value = STATION_DEFAULTS$verticaltrawlopening)
         )
@@ -696,7 +722,18 @@ mod_fishstations_server <- function(id) {
         data.frame(matrix("", nrow = 1, ncol = length(metadataCols), dimnames = list(NULL, metadataCols)), stringsAsFactors = FALSE)
       )
     })
-    output$metadataTable <- renderRHandsontable({ req(metadataDF()); rhandsontable(metadataDF(), stretchH = "all") })
+    cl <- code_lists_get(session)
+    observe_code_inputs(session, input, cl, STATION_CODE_INPUTS)
+    # missiontype and platform are picked from the active code lists
+    output$metadataTable <- renderRHandsontable({
+      req(metadataDF())
+      lists <- cl$lists
+      h <- rhandsontable(metadataDF(), stretchH = "all")
+      h <- hot_col(h, "missiontype", type = "dropdown", strict = FALSE,
+                   source = code_list_table("missiontype", lists)$code)
+      hot_col(h, "platform", type = "dropdown", strict = FALSE,
+              source = code_list_table("platform", lists)$code)
+    })
     observeEvent(input$metadataTable, { metadataDF(hot_to_r(input$metadataTable)) })
     observeEvent(input$file, {
       req(input$file)
@@ -725,8 +762,7 @@ mod_fishstations_server <- function(id) {
       df <- df %>%
         mutate(
           missionnumber = m$missionnumber,
-          catchplatform = m$platform,
-          stationtype   = m$missiontype
+          catchplatform = m$platform
         )
       rawData(df)
       showNotification("Metadata added to the stations sheet", type = "message")
@@ -815,6 +851,11 @@ mod_fishstations_server <- function(id) {
           gear                 = st_default_chr(input$st_gear),
           gearcount            = st_default_num(input$st_gearcount),
           area                 = st_default_chr(input$st_area),
+          # stationtype from the file when given, otherwise the default
+          # (it used to be filled with the mission type, a different code list)
+          stationtype          = dplyr::if_else(is.na(stationtype) | !nzchar(as.character(stationtype)),
+                                                st_default_chr(input$st_stationtype),
+                                                as.character(stationtype)),
           samplequality        = NA_character_,
           gearcondition        = NA_character_,
           trawldoorspread      = st_default_num(input$st_trawldoorspread),
@@ -903,6 +944,13 @@ mod_catchsamples_ui <- function(id) {
                            fileInput(ns("fileSP"), "Import Catches file (CSV, XLS or XLSX)", accept = c(".csv", ".xlsx", ".xls"), buttonLabel = "Browse…")
                        )
                    ),
+                   div(class = "card mb-4",
+                       div(class = "card-header h6", icon("sliders", class = "me-2"), "Catch sample defaults"),
+                       div(class = "card-body",
+                           code_select_input(ns("cs_conservation"), "conservation", "conservation", "1"),
+                           code_select_input(ns("cs_catchproducttype"), "catchproducttype", "producttype", "1")
+                       )
+                   ),
                    div(class = "card",
                        div(class = "card-header h5 bg-success text-white", icon("file-export", class = "me-2"), "2. Export results"),
                        div(class = "card-body",
@@ -924,6 +972,9 @@ mod_catchsamples_ui <- function(id) {
 mod_catchsamples_server <- function(id) {
   moduleServer(id, function(input, output, session) {
     ns <- session$ns
+    cl <- code_lists_get(session)
+    observe_code_inputs(session, input, cl, c(cs_conservation = "conservation",
+                                              cs_catchproducttype = "producttype"))
     rv_c <- shiny::reactiveValues(
       df = NULL, espece_file = NULL, sp_remap = character(0),
       solved_session = 0L, err_import = NULL
@@ -1177,8 +1228,8 @@ mod_catchsamples_server <- function(id) {
       out %>%
         dplyr::mutate(
           commonname = as.character(scientificname),
-          conservation = 1L,
-          catchproducttype = 1L,
+          conservation = code_default(input$cs_conservation),
+          catchproducttype = code_default(input$cs_catchproducttype),
           missionnumber = NA,
           catchpartnumber = 1L,
           sampletype = NA,
@@ -1395,6 +1446,11 @@ mod_individuals_ui <- function(id) {
            .indiv-actions { display:flex; flex-direction:column; gap:.4rem; margin-top:.25rem; margin-bottom:.5rem; }
            .indiv-actions .btn { margin:0 !important; }"
         )),
+        h6("Individual defaults"),
+        code_select_input(ns("ind_lengthresolution"), "lengthresolution (lengths are rounded to it)",
+                          "lengthresolution", "2"),
+        code_select_input(ns("ind_individualproducttype"), "individualproducttype", "producttype", "1"),
+        helpText("Sex and maturation stage are translated with the Sex and Maturation stage code lists."),
         div(class = "indiv-actions",
           actionButton(ns("btn_join"), "Join Biology with Length", class = "btn-primary w-100", icon = icon("link")),
           downloadButton(ns("dl_individuals"), "Export Individuals_LPA.xlsx", class = "btn-success w-100")
@@ -1452,6 +1508,9 @@ mod_individuals_ui <- function(id) {
 mod_individuals_server <- function(id) {
   moduleServer(id, function(input, output, session) {
     ns <- session$ns
+    cl <- code_lists_get(session)
+    observe_code_inputs(session, input, cl, c(ind_lengthresolution = "lengthresolution",
+                                              ind_individualproducttype = "producttype"))
     rv <- reactiveValues(
       fq_raw = NULL, bio_raw = NULL,
       fq_path = NULL, bio_path = NULL,
@@ -2172,13 +2231,20 @@ mod_individuals_server <- function(id) {
       sms            <- pick(c("sms", "sms_bio"))
       sexe_col       <- pick(c("sexe", "sexe_bio"))
 
+      # Lengths rounded to the chosen length resolution (5 mm -> 0.5 cm classes)
+      lists <- cl$lists
+      res_code <- code_default(input$ind_lengthresolution)
+      step <- length_resolution_cm(res_code, lists)
+      len_cm <- suppressWarnings(as.numeric(taille))
+      if (!is.na(step) && step > 0) len_cm <- round(len_cm / step) * step
+
       out <- tibble(
         scientificname        = as.character(espece),
-        length                = round(suppressWarnings(as.numeric(taille)) * 2) / 2 / 100,
-        sex                   = indiv_map_sexe_export(sexe_col),
+        length                = len_cm / 100,
+        sex                   = code_list_map("sex", sexe_col, lists),
         serialnumber          = as.character(station),
         specimenid            = suppressWarnings(as.integer(nombre)),
-        maturationstage       = as.character(sms),
+        maturationstage       = code_list_map("maturationstage", sms, lists),
         individualweight      = suppressWarnings(as.numeric(poids_g)) / 1000,
         Poids_Mens            = suppressWarnings(as.numeric(poids_mens_col)),
         catchsampleid         = NA_character_,
@@ -2186,8 +2252,8 @@ mod_individuals_server <- function(id) {
         diameter              = NA_real_,
         missionnumber         = NA_character_,
         specialstage          = NA_character_,
-        individualproducttype = 1L,
-        lengthresolution      = 2L
+        individualproducttype = code_default(input$ind_individualproducttype),
+        lengthresolution      = res_code
       )
       out <- out[, INDIV_EXPORT_COL_ORDER]
       out
@@ -2223,6 +2289,11 @@ mod_biotic_ui <- function(id) {
         fileInput(ns("in_fish"),     "Fishstations_LPA.xlsx",  accept = ".xlsx", buttonLabel = "Browse…"),
         fileInput(ns("in_catch"),    "Catchsamples_LPA.xlsx",  accept = ".xlsx", buttonLabel = "Browse…"),
         fileInput(ns("in_indiv"),    "Individuals_LPA.xlsx",   accept = ".xlsx", buttonLabel = "Browse…"),
+        h6("Length sample defaults"),
+        helpText("Written for catch samples that have measured fish."),
+        code_select_input(ns("bs_sampletype"), "sampletype", "sampletype", "20"),
+        code_select_input(ns("bs_lengthmeasurement"), "lengthmeasurement", "lengthmeasurement", "E"),
+        code_select_input(ns("bs_sampleproducttype"), "sampleproducttype", "producttype", "1"),
         actionButton(ns("process"), "Combine the data", class = "btn-primary w-100 mb-2"),
         downloadButton(ns("download_biotic"), "Download Biotic_LPA", class = "btn-success w-100"),
         width = 3
@@ -2268,6 +2339,10 @@ mod_biotic_ui <- function(id) {
 }
 mod_biotic_server <- function(id) {
   moduleServer(id, function(input, output, session) {
+    cl <- code_lists_get(session)
+    observe_code_inputs(session, input, cl, c(bs_sampletype = "sampletype",
+                                              bs_lengthmeasurement = "lengthmeasurement",
+                                              bs_sampleproducttype = "producttype"))
     observeEvent(input$in_missions, {
       df <- read_excel(input$in_missions$datapath)
       output$preview_missions <- renderDT({ datatable(head(df,5), options=list(dom='t',paging=FALSE)) })
@@ -2373,12 +2448,12 @@ mod_biotic_server <- function(id) {
         catchesamples <- catchesamples %>%
           left_join(summary_indiv, by=c("serialnumber","catchsampleid")) %>%
           mutate(
-            sampleproducttype   = if_else(!is.na(poids),1L,sampleproducttype),
-            lengthmeasurement   = if_else(!is.na(poids),"E",lengthmeasurement),
+            sampleproducttype   = if_else(!is.na(poids), code_default(input$bs_sampleproducttype), as.character(sampleproducttype)),
+            lengthmeasurement   = if_else(!is.na(poids), code_default(input$bs_lengthmeasurement), as.character(lengthmeasurement)),
             lengthsampleweight  = if_else(!is.na(poids),poids,lengthsampleweight),
             lengthsamplecount   = if_else(!is.na(poids),max_specimen,lengthsamplecount),
             specimensamplecount = if_else(!is.na(poids),max_specimen,specimensamplecount),
-            sampletype          = if_else(!is.na(poids),20L,sampletype)
+            sampletype          = if_else(!is.na(poids), code_default(input$bs_sampletype), as.character(sampletype))
           ) %>% select(-poids,-max_specimen)
         incProgress(0.25)
         if(all(c("scientificname","Poids_Mens") %in% colnames(individuals))) {
