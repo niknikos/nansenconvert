@@ -116,14 +116,18 @@ for (d in 0:2) {
   date <- format(as.Date("2026-03-10") + d, "%Y%m%d")
   t_sec <- 7 * 3600 + 15 * 60
   interval <- 0
+  lat <- 20.3 + 0.4 * d
+  lon <- -17.4
   for (transect in 1:2) {
-    lat <- 20.3 + 0.4 * (2 * d + transect - 1) / 2
-    lon <- -17.4
+    # Zig-zag: offshore (west) then back inshore (east), 0.2 degrees further north
+    heading <- if (transect == 1) 270 else 90
+    if (transect == 2) lat <- lat + 0.2
     for (j in 1:25) {
       interval <- interval + 1
       t_end <- t_sec + 360 + runif(1, -20, 20)           # about 1 nmi at 10 kn
-      p_end <- move(lat, lon, 1, 270)
-      bottom <- round(60 + 6 * j + rnorm(1, 0, 5))
+      p_end <- move(lat, lon, 1, heading)
+      offshore <- if (transect == 1) j else 26 - j
+      bottom <- round(60 + 6 * offshore + rnorm(1, 0, 5))
       cell <- data.frame(
         Interval = interval, Date_S = as.numeric(date), Time_S = sub(".", ",", fmt_hms(t_sec), fixed = TRUE),
         Date_E = as.numeric(date), Time_E = sub(".", ",", fmt_hms(t_end), fixed = TRUE),
@@ -153,7 +157,7 @@ for (d in 0:2) {
       t_sec <- t_end + 1
       lat <- p_end[1]; lon <- p_end[2]
     }
-    t_sec <- t_sec + 45 * 60                               # turn between transects
+    t_sec <- t_sec + 75 * 60                               # run between transects
   }
 }
 nasc <- do.call(rbind, nasc_rows)

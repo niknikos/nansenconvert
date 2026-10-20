@@ -724,5 +724,3 @@ server <- function(input, output, session) {
 # 3) Launch the application
 # ---------------------------------------------------------------
 shinyApp(ui = ui, server = server)
-NA
-shinyApp(ui = ui, server = server)

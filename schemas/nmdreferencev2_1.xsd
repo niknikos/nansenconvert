@@ -1,0 +1,2230 @@
+<?xml version="1.0"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns="http://www.imr.no/formats/nmdreference/v2.1" targetNamespace="http://www.imr.no/formats/nmdreference/v2.1" xmlns:imrd="http://www.imr.no/formats/nmddocumentation/v1_0" elementFormDefault="qualified" version="1.0">   
+    
+    <xs:complexType name="TableInfoType">
+        <xs:sequence>
+            <xs:element name="id" type="xs:string" minOccurs="0" maxOccurs="1" />       
+            <xs:element name="name" type="StringWithAnyAttributes" minOccurs="0" maxOccurs="1" >
+                <xs:annotation>
+                    <xs:documentation>
+                        <imrd:imrDoc>
+                            <imrd:description lang="no">Navn på tabell.</imrd:description>
+                            <imrd:description lang="en">Name of the table.</imrd:description>
+                        </imrd:imrDoc>
+                    </xs:documentation>
+                </xs:annotation>
+            </xs:element>       
+            <xs:element name="description" type="StringWithAnyAttributes" minOccurs="0" maxOccurs="1">
+                <xs:annotation>
+                    <xs:documentation>
+                        <imrd:imrDoc>
+                            <imrd:description lang="no">Beskrivelse av tabellen.</imrd:description>
+                            <imrd:description lang="en">Description of the table.</imrd:description>
+                        </imrd:imrDoc>
+                    </xs:documentation>
+                </xs:annotation>
+            </xs:element>    
+            <xs:element name="idDataset" type="xs:string" minOccurs="0" maxOccurs="1" />                  
+        </xs:sequence>
+        <xs:attributeGroup ref="GenericAttrRowGroup" />  
+        <xs:attribute name="deprecated" type="xs:boolean">
+            <xs:annotation>
+                <xs:documentation>
+                    <imrd:imrDoc>
+                        <imrd:description lang="no">Beskriver om en tabell ikke lengere skal brukes.</imrd:description>
+                        <imrd:description lang="en">Describes whether a table is currently in use.</imrd:description>
+                    </imrd:imrDoc>
+                </xs:documentation>
+            </xs:annotation>
+        </xs:attribute>
+        <xs:attribute name="validFrom" type="xs:dateTime"/>
+        <xs:attribute name="validTo" type="xs:dateTime"/>  
+        <xs:attribute name="newtable" type="xs:string">
+            <xs:annotation>
+                <xs:documentation>
+                    <imrd:imrDoc>
+                        <imrd:description lang="no">Hvis en tabell ikke lengere er i bruk, så kan det her beskrives hvilken tabell som har tatt over.</imrd:description>
+                        <imrd:description lang="en">If a table is no longer in use, a new tablename can be used here to tell the name of the new table.</imrd:description>
+                    </imrd:imrDoc>
+                </xs:documentation>
+            </xs:annotation>
+        </xs:attribute>
+    </xs:complexType>            
+    
+   
+    <xs:complexType name="FAOFishingGearCategoryElementType" >
+        <xs:sequence>
+            <xs:element name="id" type="xs:string" minOccurs="0" maxOccurs="1" />        
+            <xs:element name="categoryCode" type="StringWithAnyAttributes" minOccurs="0" maxOccurs="1">
+                <xs:annotation>
+                    <xs:documentation>
+                        <imrd:imrDoc>
+                            <imrd:description lang="no">Obligatorisk kode for kategorien av fiskeutstyr.</imrd:description>
+                            <imrd:description lang="en">Mandatory code for the category of fishing gear.</imrd:description>
+                        </imrd:imrDoc>
+                    </xs:documentation>
+                </xs:annotation>                
+            </xs:element> 
+            <xs:element name="category" type="StringWithAnyAttributes" minOccurs="0" maxOccurs="1">
+                <xs:annotation>
+                    <xs:documentation>
+                        <imrd:imrDoc>
+                            <imrd:description lang="no">Obligatorisk information for kategorien av fiskeutstyr.</imrd:description>
+                            <imrd:description lang="en">Mandatory information for the category of fishing gear.</imrd:description>
+                        </imrd:imrDoc>
+                    </xs:documentation>
+                </xs:annotation>                 
+            </xs:element>    
+            <xs:element name="description" type="StringWithAnyAttributes" minOccurs="0" maxOccurs="1">
+                <xs:annotation>
+                    <xs:documentation>
+                        <imrd:imrDoc>
+                            <imrd:description lang="no">Beskrivelse av kategorien av fiskeutstyr.</imrd:description>
+                            <imrd:description lang="en">Description of this category of fishing gears.</imrd:description>
+                        </imrd:imrDoc>
+                    </xs:documentation>
+                </xs:annotation> 
+            </xs:element>
+            <xs:element name="details" minOccurs="0" maxOccurs="1">
+                <xs:complexType>
+                    <xs:sequence>
+                        <xs:element name="detail" type="FAOFishingGearDetailElementType" minOccurs="0" maxOccurs="unbounded" />                            
+                    </xs:sequence>
+                </xs:complexType>
+            </xs:element>
+        </xs:sequence>
+        <xs:attributeGroup ref="GenericAttrRowGroup" />   
+        <xs:attributeGroup ref="DeprecatedAttrGroup" />    
+        <xs:anyAttribute />                
+    </xs:complexType>
+    <!--
+        FishingGear list element.
+    -->
+    <xs:complexType name="FAOFishingGearDetailElementType" >
+        <xs:sequence>
+            <xs:element name="id" type="xs:string" minOccurs="0" maxOccurs="1" />
+            <xs:element name="idFishingGearCategory" type="xs:string" minOccurs="0" maxOccurs="1" />
+            <xs:element name="detailCode" type="StringWithAnyAttributes" minOccurs="0" maxOccurs="1">
+                <xs:annotation>
+                    <xs:documentation>
+                        <imrd:imrDoc>
+                            <imrd:description lang="no"></imrd:description>
+                            <imrd:description lang="en">More detailed information on corresponding gears and codes, in accordance with Commission Regulation (EC) No 26/2004 (1) and Commission Implementing Regulation (EU) No 404/2011 (2)</imrd:description>
+                        </imrd:imrDoc>
+                    </xs:documentation>
+                </xs:annotation>                
+            </xs:element>                   
+            <xs:element name="detail" type="StringWithAnyAttributes" minOccurs="0" maxOccurs="1">
+                <xs:annotation>
+                    <xs:documentation>
+                        <imrd:imrDoc>
+                            <imrd:description lang="no"></imrd:description>
+                            <imrd:description lang="en">More detailed information on corresponding gears and codes, in accordance with Commission Regulation (EC) No 26/2004 (1) and Commission Implementing Regulation (EU) No 404/2011 (2)</imrd:description>
+                        </imrd:imrDoc>
+                    </xs:documentation>
+                </xs:annotation>                
+            </xs:element>                
+            <xs:element name="description" type="StringWithAnyAttributes" minOccurs="0" maxOccurs="1">
+                <xs:annotation>
+                    <xs:documentation>
+                        <imrd:imrDoc>
+                            <imrd:description lang="no">Beskrivelse av typen av fiskeutstyr.</imrd:description>
+                            <imrd:description lang="en">Description of this type of fishing gears.</imrd:description>
+                        </imrd:imrDoc>
+                    </xs:documentation>
+                </xs:annotation>                
+            </xs:element>
+        </xs:sequence>
+        <xs:attributeGroup ref="GenericAttrRowGroup" />   
+        <xs:attributeGroup ref="DeprecatedAttrGroup" />    
+        <xs:anyAttribute />                
+    </xs:complexType>
+    
+    <!--
+        Landingsite list element.
+    -->
+    <xs:complexType name="LandingsiteElementType" >
+        <xs:sequence>
+            <xs:element name="id" type="StringWithAnyAttributes" minOccurs="0" maxOccurs="1" />        
+            <xs:element name="code" type="StringWithAnyAttributes" minOccurs="0" maxOccurs="1"/> 
+            <xs:element name="region" type="StringWithAnyAttributes" minOccurs="0" maxOccurs="1"/>    
+            <xs:element name="placename" type="StringWithAnyAttributes" minOccurs="0" maxOccurs="1"/>   
+            <xs:element name="name" type="StringWithAnyAttributes" minOccurs="0" maxOccurs="1"/>    
+            <xs:element name="buyerid" type="StringWithAnyAttributes" minOccurs="0" maxOccurs="1"/>    
+            <xs:element name="locationid" type="StringWithAnyAttributes" minOccurs="0" maxOccurs="1"/> 
+            <xs:element name="locode" type="StringWithAnyAttributes" minOccurs="0" maxOccurs="1"/>       
+            <xs:element name="description" type="StringWithAnyAttributes" minOccurs="0" maxOccurs="1"/>
+        </xs:sequence>
+        <xs:attributeGroup ref="GenericAttrRowGroup" />   
+        <xs:attributeGroup ref="DeprecatedAttrGroup" />    
+        <xs:anyAttribute />                
+    </xs:complexType>    
+        
+    
+    <!--
+        Acoustic category list element.
+    -->
+    <xs:complexType name="AcousticCategoryElementType" >
+        <xs:sequence>
+            <xs:element name="id" type="xs:string" minOccurs="0" maxOccurs="1" />        
+            <xs:element name="acousticCategory" type="StringWithAnyAttributes" minOccurs="0" maxOccurs="1"/> <!-- Key -->
+            <xs:element name="commonInitial" type="StringWithAnyAttributes" minOccurs="0" maxOccurs="1"/>
+            <xs:element name="commonName" type="StringWithAnyAttributes" minOccurs="0" maxOccurs="1"/>
+            <xs:element name="englishInitial" type="StringWithAnyAttributes" minOccurs="0" maxOccurs="1"/>
+            <xs:element name="englishName" type="StringWithAnyAttributes" minOccurs="0" maxOccurs="1"/>            
+            <xs:element name="pgnapescode" type="StringWithAnyAttributes" minOccurs="0" maxOccurs="1"/>
+            <xs:element name="description" type="StringWithAnyAttributes" minOccurs="0" maxOccurs="1"/>
+        </xs:sequence>
+        <xs:attributeGroup ref="GenericAttrRowGroup" />   
+        <xs:attributeGroup ref="DeprecatedAttrGroup" />    
+        <xs:anyAttribute />                
+    </xs:complexType>
+
+    <!-- 
+        Equipment type element 
+    -->
+    <xs:complexType name="EquipmentElementType">
+        <xs:sequence>
+            <xs:element name="id" type="xs:string" minOccurs="0" maxOccurs="1" />                         
+            <xs:element name="code" type="StringWithAnyAttributes" minOccurs="0" maxOccurs="1">
+                <xs:annotation>
+                    <xs:documentation>
+                        <imrd:imrDoc>
+                            <imrd:description lang="no">Intern HI kode for type utstyr.</imrd:description>
+                            <imrd:description lang="en">Internal IMR code for type of equipment.</imrd:description>
+                        </imrd:imrDoc>
+                    </xs:documentation>
+                </xs:annotation> 
+            </xs:element>
+            <xs:element name="name" type="StringWithAnyAttributes" minOccurs="0" maxOccurs="1">
+                <xs:annotation>
+                    <xs:documentation>
+                        <imrd:imrDoc>
+                            <imrd:description lang="no">Navn på type utstyr.</imrd:description>
+                            <imrd:description lang="en">Name of the type of equipment.</imrd:description>
+                        </imrd:imrDoc>
+                    </xs:documentation>
+                </xs:annotation>                 
+            </xs:element>
+            <xs:element name="area" type="DecimalWithAnyAttributes" minOccurs="0" maxOccurs="1"/>
+            <xs:element name="description" type="StringWithAnyAttributes" minOccurs="0" maxOccurs="1">
+                <xs:annotation>
+                    <xs:documentation>
+                        <imrd:imrDoc>
+                            <imrd:description lang="no">Mer detaljert beskrivelse av typen utstyr.</imrd:description>
+                            <imrd:description lang="en">More detailed description of the equipment.</imrd:description>
+                        </imrd:imrDoc>
+                    </xs:documentation>
+                </xs:annotation> 
+            </xs:element>
+        </xs:sequence>
+        <xs:attributeGroup ref="GenericAttrRowGroup" /> 
+        <xs:attributeGroup ref="DeprecatedAttrGroup" />   
+        <xs:anyAttribute />                 
+    </xs:complexType>
+
+    <xs:complexType name="AgeReaderElementType">
+        <xs:sequence>
+            <xs:element name="id" type="xs:string" minOccurs="0" maxOccurs="1" />                         
+            <xs:element name="code" type="StringWithAnyAttributes" minOccurs="0" maxOccurs="1"> <!-- Key -->
+                <xs:annotation>
+                    <xs:documentation>
+                        <imrd:imrDoc>
+                            <imrd:description lang="no">Unik kode for aldersleser.</imrd:description>
+                            <imrd:description lang="en">Unique code for the age reader.</imrd:description>
+                        </imrd:imrDoc>
+                    </xs:documentation>
+                </xs:annotation>      
+            </xs:element>       
+            <xs:element name="name" type="StringWithAnyAttributes" minOccurs="0" maxOccurs="1">
+                <xs:annotation>
+                    <xs:documentation>
+                        <imrd:imrDoc>
+                            <imrd:description lang="no">Navn på aldersleser.</imrd:description>
+                            <imrd:description lang="en">Name of age reader.</imrd:description>
+                        </imrd:imrDoc>
+                    </xs:documentation>
+                </xs:annotation>                    
+            </xs:element> 
+            <xs:element name="description" type="StringWithAnyAttributes" minOccurs="0" maxOccurs="1">
+                <xs:annotation>
+                    <xs:documentation>
+                        <imrd:imrDoc>
+                            <imrd:description lang="no">Ekstra informasjon om aldersleser.</imrd:description>
+                            <imrd:description lang="en">Extra information about age reader.</imrd:description>
+                        </imrd:imrDoc>
+                    </xs:documentation>
+                </xs:annotation>                     
+            </xs:element>
+            <xs:element name="restrictions" minOccurs="0" maxOccurs="1">
+                <xs:complexType>
+                    <xs:sequence>
+                        <xs:element name="restriction" type="AgeReaderRestrictionElementType" minOccurs="1" maxOccurs="unbounded"/>
+                    </xs:sequence>
+                </xs:complexType>
+            </xs:element>               
+        </xs:sequence>
+        <xs:attributeGroup ref="GenericAttrRowGroup" /> 
+        <xs:attributeGroup ref="DeprecatedAttrGroup" />   
+        <xs:anyAttribute />                 
+    </xs:complexType>
+
+    <xs:complexType name="AgeReaderRestrictionElementType">
+        <xs:sequence>
+            <xs:element name="id" type="xs:string" minOccurs="0" maxOccurs="1" />           
+            <xs:element name="idAgeReader" type="xs:string" minOccurs="0" maxOccurs="1" />                         
+            <xs:element name="num" type="StringWithAnyAttributes" minOccurs="0" maxOccurs="1">
+                <xs:annotation>
+                    <xs:documentation>
+                        <imrd:imrDoc>
+                            <imrd:description lang="no">Unik kode for restriksjonsraden på denne alderselseren.</imrd:description>
+                            <imrd:description lang="en">Unique code for this row under the agereader.</imrd:description>
+                        </imrd:imrDoc>
+                    </xs:documentation>
+                </xs:annotation>                    
+            </xs:element>
+            <xs:element name="species_code" type="StringWithAnyAttributes" minOccurs="0" maxOccurs="1">
+                <xs:annotation>
+                    <xs:documentation>
+                        <imrd:imrDoc>
+                            <imrd:description lang="no">Arts kode (tsn).</imrd:description>
+                            <imrd:description lang="en">Species code(tsn)..</imrd:description>
+                            <imrd:referenceTable href="http://tomcat7.imr.no:8080/apis/nmdapi/reference/v2/dataset/taxa?version=2.0"/>                                                                                      
+                        </imrd:imrDoc>
+                    </xs:documentation>
+                </xs:annotation>             
+            </xs:element>               
+            <xs:element name="species_norwegian_name" type="StringWithAnyAttributes" minOccurs="0" maxOccurs="1">
+                <xs:annotation>
+                    <xs:documentation>
+                        <imrd:imrDoc>
+                            <imrd:description lang="no">Norsk navn på art.</imrd:description>
+                            <imrd:description lang="en">Norwegian name for the species.</imrd:description>
+                            <imrd:referenceTable href="http://tomcat7.imr.no:8080/apis/nmdapi/reference/v2/dataset/taxa?version=2.0"/>                                                                                      
+                        </imrd:imrDoc>
+                    </xs:documentation>
+                </xs:annotation>                
+            </xs:element>
+            <xs:element name="species_scientific_name" type="StringWithAnyAttributes" minOccurs="0" maxOccurs="1">
+                <xs:annotation>
+                    <xs:documentation>
+                        <imrd:imrDoc>
+                            <imrd:description lang="no">Engelsk navn på art.</imrd:description>
+                            <imrd:description lang="en">English name for the species.</imrd:description>
+                            <imrd:referenceTable href="http://tomcat7.imr.no:8080/apis/nmdapi/reference/v2/dataset/taxa?version=2.0"/>                                                                                      
+                        </imrd:imrDoc>
+                    </xs:documentation>
+                </xs:annotation>                   
+            </xs:element>
+            <xs:element name="certification_restriction" type="StringWithAnyAttributes" minOccurs="0" maxOccurs="1">
+                <xs:annotation>
+                    <xs:documentation>
+                        <imrd:imrDoc>
+                            <imrd:description lang="no">For sild, brukes stock, men det vil kunne være f.eks. områdeparametere for andre arter.</imrd:description>
+                            <imrd:description lang="en">For herring, stock will be used, but could be areaparameters and other restrictions.</imrd:description>
+                        </imrd:imrDoc>
+                    </xs:documentation>
+                </xs:annotation>                   
+            </xs:element>
+            <xs:element name="certification_date" type="DateWithAnyAttributes" minOccurs="0" maxOccurs="1">
+                <xs:annotation>
+                    <xs:documentation>
+                        <imrd:imrDoc>
+                            <imrd:description lang="no">Dato sertifisering ble godkjent.</imrd:description>
+                            <imrd:description lang="en">Date certification was achieved.</imrd:description>
+                        </imrd:imrDoc>
+                    </xs:documentation>
+                </xs:annotation>                     
+            </xs:element>
+            <xs:element name="short_description" type="StringWithAnyAttributes" minOccurs="0" maxOccurs="1">
+                <xs:annotation>
+                    <xs:documentation>
+                        <imrd:imrDoc>
+                            <imrd:description lang="no">Fritekst beskrivelse av sertifisering for art.</imrd:description>
+                            <imrd:description lang="en">Freetext description og certification.</imrd:description>
+                        </imrd:imrDoc>
+                    </xs:documentation>
+                </xs:annotation>                     
+            </xs:element>
+            <xs:element name="comment" type="StringWithAnyAttributes" minOccurs="0" maxOccurs="1">          
+                <xs:annotation>
+                    <xs:documentation>
+                        <imrd:imrDoc>
+                            <imrd:description lang="no">Fritekst kommentar.</imrd:description>
+                            <imrd:description lang="en">Freetext comment.</imrd:description>
+                        </imrd:imrDoc>
+                    </xs:documentation>
+                </xs:annotation>                                         
+            </xs:element>
+        </xs:sequence>
+        <xs:attributeGroup ref="GenericAttrRowGroup" /> 
+        <xs:attributeGroup ref="DeprecatedAttrGroup" />   
+        <xs:anyAttribute />                 
+    </xs:complexType>    
+    
+    <!-- 
+        FishingbaitType element type 
+    -->
+    <xs:complexType name="FishingbaitTypeElementType">
+        <xs:sequence>
+            <xs:element name="id" type="xs:string" minOccurs="0" maxOccurs="1" />                         
+            <xs:element name="code" type="StringWithAnyAttributes" minOccurs="0" maxOccurs="1">
+                <xs:annotation>
+                    <xs:documentation>
+                        <imrd:imrDoc>
+                            <imrd:description lang="no">Intern HI kode for agn.</imrd:description>
+                            <imrd:description lang="en">Internal IMR code for fishingbait types.</imrd:description>
+                        </imrd:imrDoc>
+                    </xs:documentation>
+                </xs:annotation> 
+            </xs:element>
+            <xs:element name="name" type="StringWithAnyAttributes" minOccurs="0" maxOccurs="1">
+                <xs:annotation>
+                    <xs:documentation>
+                        <imrd:imrDoc>
+                            <imrd:description lang="no">Navn på agn.</imrd:description>
+                            <imrd:description lang="en">Name of fishingbait types.</imrd:description>
+                        </imrd:imrDoc>
+                    </xs:documentation>
+                </xs:annotation>                 
+            </xs:element>
+            <xs:element name="description" type="StringWithAnyAttributes" minOccurs="0" maxOccurs="1">
+                <xs:annotation>
+                    <xs:documentation>
+                        <imrd:imrDoc>
+                            <imrd:description lang="no">Beskrivelse av agn.</imrd:description>
+                            <imrd:description lang="en">Description of fishingbait types.</imrd:description>
+                        </imrd:imrDoc>
+                    </xs:documentation>
+                </xs:annotation>                  
+            </xs:element>
+        </xs:sequence>        
+        <xs:attributeGroup ref="GenericAttrRowGroup" />
+        <xs:attributeGroup ref="DeprecatedAttrGroup" /> 
+        <xs:anyAttribute />
+    </xs:complexType>
+
+    <xs:complexType name="ExperienceElementType">
+        <xs:sequence>
+            <xs:element name="id" type="xs:string" minOccurs="0" maxOccurs="1" />           
+            <xs:element name="code" type="StringWithAnyAttributes" minOccurs="0" maxOccurs="1"/>
+            <xs:element name="name" type="StringWithAnyAttributes" minOccurs="0" maxOccurs="1"/>
+            <xs:element name="description" type="StringWithAnyAttributes" minOccurs="0" maxOccurs="1"/>                                 
+        </xs:sequence>
+        <xs:attributeGroup ref="GenericAttrRowGroup" /> 
+        <xs:attributeGroup ref="DeprecatedAttrGroup" />   
+        <xs:anyAttribute />                 
+    </xs:complexType>
+
+    <xs:complexType name="TrawldoorElementType">
+        <xs:sequence>
+            <xs:element name="id" type="xs:string" minOccurs="0" maxOccurs="1" />           
+            <xs:element name="code" type="StringWithAnyAttributes" minOccurs="0" maxOccurs="1"/> <!-- Key -->
+            <xs:element name="name" type="StringWithAnyAttributes" minOccurs="0" maxOccurs="1"/> 
+            <xs:element name="description" type="StringWithAnyAttributes" minOccurs="0" maxOccurs="1"/>        
+        </xs:sequence>
+        <xs:attributeGroup ref="GenericAttrRowGroup" /> 
+        <xs:attributeGroup ref="DeprecatedAttrGroup" />   
+        <xs:anyAttribute />                 
+    </xs:complexType>  
+
+
+    <!-- 
+        Missiontype element type 
+    -->
+    <xs:complexType name="MissionTypeElementType">
+        <xs:sequence>
+            <xs:element name="id" type="xs:string" minOccurs="0" maxOccurs="1" />                         
+            <xs:element name="code" type="StringWithAnyAttributes" minOccurs="0" maxOccurs="1">
+                <xs:annotation>
+                    <xs:documentation>
+                        <imrd:imrDoc>
+                            <imrd:description lang="no">Intern HI kode for oppdragstype.</imrd:description>
+                            <imrd:description lang="en">Internal IMR code for mission types.</imrd:description>
+                        </imrd:imrDoc>
+                    </xs:documentation>
+                </xs:annotation> 
+            </xs:element>
+            <xs:element name="name" type="StringWithAnyAttributes" minOccurs="0" maxOccurs="1">
+                <xs:annotation>
+                    <xs:documentation>
+                        <imrd:imrDoc>
+                            <imrd:description lang="no">Navn på oppdragstype.</imrd:description>
+                            <imrd:description lang="en">Name of mission types.</imrd:description>
+                        </imrd:imrDoc>
+                    </xs:documentation>
+                </xs:annotation>                 
+            </xs:element>
+            <xs:element name="description" type="StringWithAnyAttributes" minOccurs="0" maxOccurs="1">
+                <xs:annotation>
+                    <xs:documentation>
+                        <imrd:imrDoc>
+                            <imrd:description lang="no">Beskrivelse av oppdragstype.</imrd:description>
+                            <imrd:description lang="en">Description of mission types.</imrd:description>
+                        </imrd:imrDoc>
+                    </xs:documentation>
+                </xs:annotation>                  
+            </xs:element>
+        </xs:sequence>        
+        <xs:attributeGroup ref="GenericAttrRowGroup" />
+        <xs:attributeGroup ref="DeprecatedAttrGroup" /> 
+        <xs:anyAttribute />
+    </xs:complexType>
+
+    <!-- 
+        Language element type 
+    -->
+    <xs:complexType name="LanguageElementType">
+        <xs:sequence>
+            <xs:element name="id" type="xs:string" minOccurs="0" maxOccurs="1" />  
+            <xs:element name="code" type="StringWithAnyAttributes" minOccurs="0" maxOccurs="1">
+                <xs:annotation>
+                    <xs:documentation>
+                        <imrd:imrDoc>
+                            <imrd:description lang="no">Intern HI kode for språk</imrd:description>
+                            <imrd:description lang="en">Internal IMR code for language.</imrd:description>
+                        </imrd:imrDoc>
+                    </xs:documentation>
+                </xs:annotation>                 
+            </xs:element>   
+            <xs:element name="name" type="StringWithAnyAttributes" minOccurs="0" maxOccurs="1">
+                <xs:annotation>
+                    <xs:documentation>
+                        <imrd:imrDoc>
+                            <imrd:description lang="no">Navn på språk.</imrd:description>
+                            <imrd:description lang="en">Name of language.</imrd:description>
+                        </imrd:imrDoc>
+                    </xs:documentation>
+                </xs:annotation>                 
+            </xs:element> 
+            <xs:element name="iso6391" type="StringWithAnyAttributes" minOccurs="0" maxOccurs="1">
+                <xs:annotation>
+                    <xs:documentation>
+                        <imrd:imrDoc>
+                            <imrd:description lang="no">iso-639-1 kode for språket.</imrd:description>
+                            <imrd:description lang="en">iso-639-1 code for the language.</imrd:description>
+                        </imrd:imrDoc>
+                    </xs:documentation>
+                </xs:annotation>                 
+            </xs:element>
+            <xs:element name="description" type="StringWithAnyAttributes" minOccurs="0" maxOccurs="1">
+                <xs:annotation>
+                    <xs:documentation>
+                        <imrd:imrDoc>
+                            <imrd:description lang="no">Beskrivelse av språket.</imrd:description>
+                            <imrd:description lang="en">Description of the language.</imrd:description>
+                        </imrd:imrDoc>
+                    </xs:documentation>
+                </xs:annotation>                 
+            </xs:element>            
+        </xs:sequence>                
+        <xs:attributeGroup ref="GenericAttrRowGroup" />
+        <xs:attributeGroup ref="DeprecatedAttrGroup" /> 
+        <xs:anyAttribute />
+    </xs:complexType>
+    
+    <!-- 
+        Project element type 
+    -->
+    <xs:complexType name="ProjectElementType">
+        <xs:sequence>
+            <xs:element name="id" type="xs:string" minOccurs="0" maxOccurs="1" />           
+            <xs:element name="code" type="StringWithAnyAttributes" minOccurs="0" maxOccurs="1">
+                <xs:annotation>
+                    <xs:documentation>
+                        <imrd:imrDoc>
+                            <imrd:description lang="no">Intern HI kode for prosjektet.</imrd:description>
+                            <imrd:description lang="en">Internal IMR code for the project.</imrd:description>
+                        </imrd:imrDoc>
+                    </xs:documentation>
+                </xs:annotation>                    
+            </xs:element>
+            <xs:element name="name" type="StringWithAnyAttributes" minOccurs="0" maxOccurs="1">
+                <xs:annotation>
+                    <xs:documentation>
+                        <imrd:imrDoc>
+                            <imrd:description lang="no">Navnet på prosjektet.</imrd:description>
+                            <imrd:description lang="en">Name of the project.</imrd:description>
+                        </imrd:imrDoc>
+                    </xs:documentation>
+                </xs:annotation>                 
+            </xs:element>
+            <xs:element name="description" type="StringWithAnyAttributes" minOccurs="0" maxOccurs="1">
+                <xs:annotation>
+                    <xs:documentation>
+                        <imrd:imrDoc>
+                            <imrd:description lang="no">Beskrivelse av prosjektet.</imrd:description>
+                            <imrd:description lang="en">Description of the project.</imrd:description>
+                        </imrd:imrDoc>
+                    </xs:documentation>
+                </xs:annotation>                  
+            </xs:element>            
+        </xs:sequence>                
+        <xs:attributeGroup ref="GenericAttrRowGroup" />
+        <xs:attributeGroup ref="DeprecatedAttrGroup" /> 
+        <xs:anyAttribute />
+    </xs:complexType>
+
+    <!-- 
+        Nation element type 
+    -->
+    <xs:complexType name="NationElementType">
+        <xs:sequence>
+            <xs:element name="id" type="xs:string" minOccurs="0" maxOccurs="1" />                         
+            <xs:element name="nation" type="StringWithAnyAttributes" minOccurs="0" maxOccurs="1">
+                <xs:annotation>
+                    <xs:documentation>
+                        <imrd:imrDoc>
+                            <imrd:description lang="no">Intern HI nasjonskode.</imrd:description>
+                            <imrd:description lang="en">Internal IMR nation code.</imrd:description>
+                        </imrd:imrDoc>
+                    </xs:documentation>
+                </xs:annotation>                 
+            </xs:element>
+            <xs:element name="nationioc" type="StringWithAnyAttributes" minOccurs="0" maxOccurs="1">
+                <xs:annotation>
+                    <xs:documentation>
+                        <imrd:imrDoc>
+                            <imrd:description lang="no">IOC nasjon kode.</imrd:description>
+                            <imrd:description lang="en">IOC nation code.</imrd:description>
+                        </imrd:imrDoc>
+                    </xs:documentation>
+                </xs:annotation>                 
+            </xs:element>
+            <xs:element name="name" type="StringWithAnyAttributes" minOccurs="0" maxOccurs="1">
+                <xs:annotation>
+                    <xs:documentation>
+                        <imrd:imrDoc>
+                            <imrd:description lang="no">Navn på nasjon.</imrd:description>
+                            <imrd:description lang="en">Name of the nation.</imrd:description>
+                        </imrd:imrDoc>
+                    </xs:documentation>
+                </xs:annotation>                 
+            </xs:element>            
+            <xs:element name="pgnapescode" type="StringWithAnyAttributes" minOccurs="0" maxOccurs="1">
+                <xs:annotation>
+                    <xs:documentation>
+                        <imrd:imrDoc>
+                            <imrd:description lang="no">PGNAPES nasjonskode.</imrd:description>
+                            <imrd:description lang="en">PGNAPES nation code.</imrd:description>
+                        </imrd:imrDoc>
+                    </xs:documentation>
+                </xs:annotation>                 
+            </xs:element>
+            <xs:element name="description" type="StringWithAnyAttributes" minOccurs="0" maxOccurs="1">
+                <xs:annotation>
+                    <xs:documentation>
+                        <imrd:imrDoc>
+                            <imrd:description lang="no">Beskrivelse av nasjon hvis det har skjedd endringer.</imrd:description>
+                            <imrd:description lang="en">Description of nation.</imrd:description>
+                        </imrd:imrDoc>
+                    </xs:documentation>
+                </xs:annotation>                    
+            </xs:element>                        
+        </xs:sequence>
+        <xs:attributeGroup ref="GenericAttrRowGroup" />
+        <xs:attributeGroup ref="DeprecatedAttrGroup" /> 
+        <xs:anyAttribute />
+    </xs:complexType>
+
+    <!-- 
+        PlatformType type element 
+    -->
+    <xs:complexType name="PlatformTypeElementType">
+        <xs:sequence>
+            <xs:element name="id" type="xs:string" minOccurs="0" maxOccurs="1" />                         
+            <xs:element name="code" type="StringWithAnyAttributes" minOccurs="0" maxOccurs="1">
+                <xs:annotation>
+                    <xs:documentation>
+                        <imrd:imrDoc>
+                            <imrd:description lang="no">Intern HI kode som beskriver platformtypen.</imrd:description>
+                            <imrd:description lang="en">Internal IMR code describing the platformtype.</imrd:description>
+                        </imrd:imrDoc>
+                    </xs:documentation>
+                </xs:annotation>                     
+            </xs:element>        
+            <xs:element name="type" type="StringWithAnyAttributes" minOccurs="0" maxOccurs="1">
+                <xs:annotation>
+                    <xs:documentation>
+                        <imrd:imrDoc>
+                            <imrd:description lang="no">Kode på hovedgruppe av platformtype.</imrd:description>
+                            <imrd:description lang="en">Code of main group of platformtype.</imrd:description>
+                        </imrd:imrDoc>
+                    </xs:documentation>
+                </xs:annotation>                    
+            </xs:element>
+            <xs:element name="subtype" type="StringWithAnyAttributes" minOccurs="0" maxOccurs="1">
+                <xs:annotation>
+                    <xs:documentation>
+                        <imrd:imrDoc>
+                            <imrd:description lang="no">Kode på undergruppe av platformtype.</imrd:description>
+                            <imrd:description lang="en">Code of subgroup of platformtype.</imrd:description>
+                        </imrd:imrDoc>
+                    </xs:documentation>
+                </xs:annotation>                 
+            </xs:element>
+            <xs:element name="typeName" type="StringWithAnyAttributes" minOccurs="0" maxOccurs="1">
+                <xs:annotation>
+                    <xs:documentation>
+                        <imrd:imrDoc>
+                            <imrd:description lang="no">Navn på hovedgruppe av platformtype.</imrd:description>
+                            <imrd:description lang="en">Name of main group of platformtype.</imrd:description>
+                        </imrd:imrDoc>
+                    </xs:documentation>
+                </xs:annotation>                 
+            </xs:element>
+            <xs:element name="subTypeName" type="StringWithAnyAttributes" minOccurs="0" maxOccurs="1">
+                <xs:annotation>
+                    <xs:documentation>
+                        <imrd:imrDoc>
+                            <imrd:description lang="no">Navn på undergruppe av platformtype.</imrd:description>
+                            <imrd:description lang="en">Name of subgroup of platformtype.</imrd:description>
+                        </imrd:imrDoc>
+                    </xs:documentation>
+                </xs:annotation>                  
+            </xs:element> 
+            <xs:element name="description" type="StringWithAnyAttributes" minOccurs="0" maxOccurs="1">
+                <xs:annotation>
+                    <xs:documentation>
+                        <imrd:imrDoc>
+                            <imrd:description lang="no">Beskrivelse av platformtypen.</imrd:description>
+                            <imrd:description lang="en">Description of the platformtype.</imrd:description>
+                        </imrd:imrDoc>
+                    </xs:documentation>
+                </xs:annotation>                  
+            </xs:element>                                  
+        </xs:sequence>
+        <xs:attributeGroup ref="GenericAttrRowGroup" />
+        <xs:attributeGroup ref="DeprecatedAttrGroup" /> 
+        <xs:anyAttribute />
+    </xs:complexType>
+
+    <!-- 
+        Platform element type 
+    -->
+    <xs:complexType name="PlatformElementType">
+        <xs:sequence>
+            <xs:element name="id" type="xs:string" minOccurs="0" maxOccurs="1" />                         
+            <xs:element name="platformNumber" type="StringWithAnyAttributes" minOccurs="0" maxOccurs="1">    
+                <xs:annotation>
+                    <xs:documentation>
+                        <imrd:imrDoc>
+                            <imrd:description lang="no">Intern  HI platformkode.</imrd:description>
+                            <imrd:description lang="en">Internal IMR platformcode.</imrd:description>
+                        </imrd:imrDoc>
+                    </xs:documentation>
+                </xs:annotation>                             
+            </xs:element>
+            <xs:element name="nationCode" type="StringWithAnyAttributes" minOccurs="0" maxOccurs="1">
+                <xs:annotation>
+                    <xs:documentation>
+                        <imrd:imrDoc>
+                            <imrd:description lang="no">Nasjonskode for platformen.</imrd:description>
+                            <imrd:description lang="en">Nationcode for the platform.</imrd:description>
+                            <imrd:referenceTable href="http://tomcat7.imr.no:8080/apis/nmdapi/reference/v2/dataset/nation?version=2.0"/>                                                          
+                        </imrd:imrDoc>
+                    </xs:documentation>
+                </xs:annotation>                  
+            </xs:element>                    
+            <xs:element name="nation" type="StringWithAnyAttributes" minOccurs="0" maxOccurs="1">
+                <xs:annotation>
+                    <xs:documentation>
+                        <imrd:imrDoc>
+                            <imrd:description lang="no">Nasjon platformen kommer fra.</imrd:description>
+                            <imrd:description lang="en">Nation the platform comes from.</imrd:description>
+                            <imrd:referenceTable href="http://tomcat7.imr.no:8080/apis/nmdapi/reference/v2/dataset/nation?version=2.0"/>                                                          
+                        </imrd:imrDoc>
+                    </xs:documentation>
+                </xs:annotation>                
+            </xs:element>                                                                            
+            <xs:element name="platformTypeCode" type="StringWithAnyAttributes" minOccurs="0" maxOccurs="1">
+                <xs:annotation>
+                    <xs:documentation>
+                        <imrd:imrDoc>
+                            <imrd:description lang="no">Kode som beskriver typen platform.</imrd:description>
+                            <imrd:description lang="en">Code describing the platformtype.</imrd:description>
+                            <imrd:referenceTable href="http://tomcat7.imr.no:8080/apis/nmdapi/reference/v2/dataset/platformType?version=2.0"/>                                                          
+                        </imrd:imrDoc>
+                    </xs:documentation>
+                </xs:annotation>                 
+            </xs:element>
+            <xs:element name="platformType" type="StringWithAnyAttributes" minOccurs="0" maxOccurs="1">
+                <xs:annotation>
+                    <xs:documentation>
+                        <imrd:imrDoc>
+                            <imrd:description lang="no">Navn på hovedgruppe som beskriver typen platform.</imrd:description>
+                            <imrd:description lang="en">Name of the main group describing the platformtype.</imrd:description>
+                            <imrd:referenceTable href="http://tomcat7.imr.no:8080/apis/nmdapi/reference/v2/dataset/platformType?version=2.0"/>                                                          
+                        </imrd:imrDoc>
+                    </xs:documentation>
+                </xs:annotation>                 
+            </xs:element>
+            <xs:element name="platformSubType" type="StringWithAnyAttributes" minOccurs="0" maxOccurs="1">
+                <xs:annotation>
+                    <xs:documentation>
+                        <imrd:imrDoc>
+                            <imrd:description lang="no">Navn på undergruppe som beskriver typen platform.</imrd:description>
+                            <imrd:description lang="en">Name of the subgroup describing the platformtype.</imrd:description>
+                            <imrd:referenceTable href="http://tomcat7.imr.no:8080/apis/nmdapi/reference/v2/dataset/platformType?version=2.0"/>                                                          
+                        </imrd:imrDoc>
+                    </xs:documentation>
+                </xs:annotation>                 
+            </xs:element>
+            <xs:element name="description" type="StringWithAnyAttributes" minOccurs="0" maxOccurs="1">
+                <xs:annotation>
+                    <xs:documentation>
+                        <imrd:imrDoc>
+                            <imrd:description lang="no">Beskrivelse av platform.</imrd:description>
+                            <imrd:description lang="en">Description of the platform.</imrd:description>
+                            <imrd:referenceTable href="http://tomcat7.imr.no:8080/apis/nmdapi/reference/v2/dataset/platformType?version=2.0"/>                                                          
+                        </imrd:imrDoc>
+                    </xs:documentation>
+                </xs:annotation>                     
+            </xs:element>                        
+            <xs:element name="platformCodes" minOccurs="0" maxOccurs="1">
+                <xs:complexType>
+                    <xs:sequence>
+                        <xs:element name="platformCode" type="PlatformCodeElementType" minOccurs="0" maxOccurs="unbounded" />                            
+                    </xs:sequence>
+                </xs:complexType>
+            </xs:element>
+            <xs:element name="institutions" minOccurs="0" maxOccurs="1">
+                <xs:complexType>
+                    <xs:sequence>
+                        <xs:element name="platformInstitution" type="PlatformInstitutionElementType" minOccurs="0" maxOccurs="unbounded" />                            
+                    </xs:sequence>
+                </xs:complexType>
+            </xs:element>            
+        </xs:sequence>
+        <xs:attributeGroup ref="GenericAttrRowGroup" />
+        <xs:attributeGroup ref="DeprecatedAttrGroup" /> 
+        <xs:anyAttribute />
+    </xs:complexType>
+
+    <xs:complexType name="PlatformInstitutionElementType">
+        <xs:sequence>
+            <xs:element name="id" type="xs:string" minOccurs="0" maxOccurs="1" />  
+            <xs:element name="idPlatform" type="xs:string" minOccurs="0" maxOccurs="1" />   
+            <xs:element name="institutionCode" type="xs:string" minOccurs="1" maxOccurs="1" >
+                <xs:annotation>
+                    <xs:documentation>
+                        <imrd:imrDoc>
+                            <imrd:description lang="no">Institusjonkode.</imrd:description>
+                            <imrd:description lang="en">Institutioncode.</imrd:description>
+                            <imrd:referenceTable href="http://tomcat7.imr.no:8080/apis/nmdapi/reference/v2/dataset/institution?version=2.0"/>                                                          
+                        </imrd:imrDoc>
+                    </xs:documentation>
+                </xs:annotation>                  
+            </xs:element>
+            <xs:element name="institution" type="xs:string" minOccurs="1" maxOccurs="1">
+                <xs:annotation>
+                    <xs:documentation>
+                        <imrd:imrDoc>
+                            <imrd:description lang="no">Navn på institusjon.</imrd:description>
+                            <imrd:description lang="en">Name of the institution.</imrd:description>
+                            <imrd:referenceTable href="http://tomcat7.imr.no:8080/apis/nmdapi/reference/v2/dataset/institution?version=2.0"/>                                                          
+                        </imrd:imrDoc>
+                    </xs:documentation>
+                </xs:annotation>                  
+            </xs:element>
+        </xs:sequence>
+        <xs:attributeGroup ref="GenericAttrRowGroup" />
+        <xs:attributeGroup ref="DeprecatedAttrGroup" />         
+    </xs:complexType>
+
+    <xs:complexType name="PlatformCodeElementType">
+        <xs:sequence>
+            <xs:element name="id" type="xs:string" minOccurs="0" maxOccurs="1" />  
+            <xs:element name="idPlatform" type="xs:string" minOccurs="0" maxOccurs="1" />                       
+            <xs:element name="num" type="IntegerWithAnyAttributes" minOccurs="0" maxOccurs="1">
+                <xs:annotation>
+                    <xs:documentation>
+                        <imrd:imrDoc>
+                            <imrd:description lang="no">En unik kode for denne raden.</imrd:description>
+                            <imrd:description lang="en">A unique code for this row.</imrd:description>
+                        </imrd:imrDoc>
+                    </xs:documentation>
+                </xs:annotation>                  
+            </xs:element>        
+            <xs:element name="value" type="StringWithAnyAttributes" minOccurs="0" maxOccurs="1">
+                <xs:annotation>
+                    <xs:documentation>
+                        <imrd:imrDoc>
+                            <imrd:description lang="no">Verdien av type sysname for denne platformen.</imrd:description>
+                            <imrd:description lang="en">The value of sysname for this platform.</imrd:description>
+                        </imrd:imrDoc>
+                    </xs:documentation>
+                </xs:annotation>                   
+            </xs:element>
+            <xs:element name="syscode" type="IntegerWithAnyAttributes" minOccurs="0" maxOccurs="1">
+                <xs:annotation>
+                    <xs:documentation>
+                        <imrd:imrDoc>
+                            <imrd:description lang="no">Kode som beskriver platformkoden.</imrd:description>
+                            <imrd:description lang="en">Code that describes the platformcode.</imrd:description>
+                            <imrd:referenceTable href="http://tomcat7.imr.no:8080/apis/nmdapi/reference/v2/dataset/platformcodesys?version=2.0"/>                                                                                      
+                        </imrd:imrDoc>
+                    </xs:documentation>
+                </xs:annotation>                
+            </xs:element>
+            <xs:element name="sysname" type="StringWithAnyAttributes" minOccurs="0" maxOccurs="1">
+                <xs:annotation>
+                    <xs:documentation>
+                        <imrd:imrDoc>
+                            <imrd:description lang="no">Navn for platformkoden.</imrd:description>
+                            <imrd:description lang="en">Name of the type of platformcode.</imrd:description>
+                            <imrd:referenceTable href="http://tomcat7.imr.no:8080/apis/nmdapi/reference/v2/dataset/platformcodesys?version=2.0"/>                                                                                      
+                        </imrd:imrDoc>
+                    </xs:documentation>
+                </xs:annotation>                       
+            </xs:element>      
+            <xs:element name="description" type="StringWithAnyAttributes" minOccurs="0" maxOccurs="1"/>                                          
+        </xs:sequence>
+        <xs:attributeGroup ref="GenericAttrRowGroup" />
+        <xs:attributeGroup ref="DeprecatedAttrGroup" />  
+        <xs:anyAttribute />       
+    </xs:complexType>   
+
+    <xs:complexType name="PlatformCodeSysElementType">
+        <xs:sequence>
+            <xs:element name="id" type="xs:string" minOccurs="0" maxOccurs="1" />  
+            <xs:element name="syscode" type="StringWithAnyAttributes" minOccurs="0" maxOccurs="1">
+                <xs:annotation>
+                    <xs:documentation>
+                        <imrd:imrDoc>
+                            <imrd:description lang="no">Unik kode som beskriver platformkodetypen.</imrd:description>
+                            <imrd:description lang="en">Unique kode that describes the platformcodetype.</imrd:description>
+                        </imrd:imrDoc>
+                    </xs:documentation>
+                </xs:annotation>                  
+            </xs:element>
+            <xs:element name="sysname" type="StringWithAnyAttributes" minOccurs="0" maxOccurs="1">
+                <xs:annotation>
+                    <xs:documentation>
+                        <imrd:imrDoc>
+                            <imrd:description lang="no">Navn som beskriver platformkodetypen.</imrd:description>
+                            <imrd:description lang="en">Name that describes the platformcodetype.</imrd:description>
+                        </imrd:imrDoc>
+                    </xs:documentation>
+                </xs:annotation>                  
+            </xs:element>      
+            <xs:element name="description" type="StringWithAnyAttributes" minOccurs="0" maxOccurs="1">
+                <xs:annotation>
+                    <xs:documentation>
+                        <imrd:imrDoc>
+                            <imrd:description lang="no">Beskrivelse av platformkodetypen.</imrd:description>
+                            <imrd:description lang="en">Description of the platformcodetype.</imrd:description>
+                        </imrd:imrDoc>
+                    </xs:documentation>
+                </xs:annotation>                   
+            </xs:element>                                          
+        </xs:sequence>
+        <xs:attributeGroup ref="GenericAttrRowGroup" />
+        <xs:attributeGroup ref="DeprecatedAttrGroup" />  
+        <xs:anyAttribute />       
+    </xs:complexType>     
+
+    <xs:complexType name="PersonElementType">
+        <xs:sequence>
+            <xs:element name="id" type="xs:string" minOccurs="0" maxOccurs="1" />                         
+            <xs:element name="num" type="IntegerWithAnyAttributes" minOccurs="0" maxOccurs="1" /> 
+            <xs:element name="firstname" type="StringWithAnyAttributes" minOccurs="0" maxOccurs="1"/>
+            <xs:element name="familyname" type="StringWithAnyAttributes" minOccurs="0" maxOccurs="1"/>
+            <xs:element name="description" type="StringWithAnyAttributes" minOccurs="0" maxOccurs="1"/>                        
+        </xs:sequence>
+        <xs:attributeGroup ref="GenericAttrRowGroup" />
+        <xs:attributeGroup ref="DeprecatedAttrGroup" /> 
+        <xs:anyAttribute />                   
+    </xs:complexType>
+
+    <!-- Taxa element type -->
+    <xs:complexType name="TaxaElementType">
+        <xs:sequence>
+            <xs:element name="id" type="xs:string" minOccurs="0" maxOccurs="1" />                         
+            <xs:element name="tsn" type="StringWithAnyAttributes" minOccurs="0" maxOccurs="1">
+                <xs:annotation>
+                    <xs:documentation>
+                        <imrd:imrDoc>
+                            <imrd:description lang="no">ITIS kode for art.</imrd:description>
+                            <imrd:description lang="en">ITIS code for the species.</imrd:description>
+                        </imrd:imrDoc>
+                    </xs:documentation>
+                </xs:annotation>                 
+            </xs:element>
+            <xs:element name="aphiaid" type="StringWithAnyAttributes" minOccurs="0" maxOccurs="1">
+            </xs:element>
+            <xs:element name="imr" type="BooleanWithAnyAttributes" minOccurs="0" maxOccurs="1">
+                <xs:annotation>
+                    <xs:documentation>
+                        <imrd:imrDoc>
+                            <imrd:description lang="no">Hvis sann så er dette en HI bare art</imrd:description>
+                            <imrd:description lang="en">If true this is a IMR species.</imrd:description>
+                        </imrd:imrDoc>
+                    </xs:documentation>
+                </xs:annotation>                   
+            </xs:element>
+            <xs:element name="nodc" type="StringWithAnyAttributes" minOccurs="0" maxOccurs="1">
+                <xs:annotation>
+                    <xs:documentation>
+                        <imrd:imrDoc>
+                            <imrd:description lang="no">Historisk NODC artskode (https://www.nodc.noaa.gov/General/CDR-detdesc/taxonomic-v8.html).</imrd:description>
+                            <imrd:description lang="en">Historical NODC species code (https://www.nodc.noaa.gov/General/CDR-detdesc/taxonomic-v8.html).</imrd:description>
+                        </imrd:imrDoc>
+                    </xs:documentation>
+                </xs:annotation>                    
+            </xs:element>
+            <xs:element name="fao" type="StringWithAnyAttributes" minOccurs="0" maxOccurs="1">
+                <xs:annotation>
+                    <xs:documentation>
+                        <imrd:imrDoc>
+                            <imrd:description lang="no">FAO artskode</imrd:description>
+                            <imrd:description lang="en">FAO speciescode</imrd:description>
+                        </imrd:imrDoc>
+                    </xs:documentation>
+                </xs:annotation>                  
+            </xs:element>
+            <xs:element name="information" type="StringWithAnyAttributes" minOccurs="0" maxOccurs="1">
+                <xs:annotation>
+                    <xs:documentation>
+                        <imrd:imrDoc>
+                            <imrd:description lang="no">Spesiell informasjon om arten.</imrd:description>
+                            <imrd:description lang="en">Special information about the species.</imrd:description>
+                        </imrd:imrDoc>
+                    </xs:documentation>
+                </xs:annotation>                 
+            </xs:element>
+            <xs:element name="pgnapes" type="StringWithAnyAttributes" minOccurs="0" maxOccurs="1">
+                <xs:annotation>
+                    <xs:documentation>
+                        <imrd:imrDoc>
+                            <imrd:description lang="no">PGNAPES artskode.</imrd:description>
+                            <imrd:description lang="en">PGNAPES species code.</imrd:description>
+                        </imrd:imrDoc>
+                    </xs:documentation>
+                </xs:annotation>                     
+            </xs:element>
+            <xs:element name="ruCode" type="IntegerWithAnyAttributes" minOccurs="0" maxOccurs="1">
+                <xs:annotation>
+                    <xs:documentation>
+                        <imrd:imrDoc>
+                            <imrd:description lang="no">Russisk artskode.</imrd:description>
+                            <imrd:description lang="en">Russian species code.</imrd:description>
+                        </imrd:imrDoc>
+                    </xs:documentation>
+                </xs:annotation>                 
+            </xs:element>
+            <xs:element name="tradefield" type="BooleanWithAnyAttributes" minOccurs="0" maxOccurs="1">
+                <xs:annotation>
+                    <xs:documentation>
+                        <imrd:imrDoc>
+                            <imrd:description lang="no">Brukes denne i FAO dataene.</imrd:description>
+                            <imrd:description lang="en">Is this used in the trade data.</imrd:description>
+                        </imrd:imrDoc>
+                    </xs:documentation>
+                </xs:annotation>                
+            </xs:element>                      
+            <xs:element name="description" type="StringWithAnyAttributes" minOccurs="0" maxOccurs="1">
+                <xs:annotation>
+                    <xs:documentation>
+                        <imrd:imrDoc>
+                            <imrd:description lang="no">Beskrivelse av ting rundt arten.</imrd:description>
+                            <imrd:description lang="en">Description of the species.</imrd:description>
+                        </imrd:imrDoc>
+                    </xs:documentation>
+                </xs:annotation>                 
+            </xs:element>                        
+            <xs:element name="restrictions" minOccurs="0" maxOccurs="1">
+                <xs:complexType>
+                    <xs:sequence>
+                        <xs:element name="restriction" type="RestrictionElementType" minOccurs="1" maxOccurs="unbounded" />
+                    </xs:sequence>
+                </xs:complexType>                
+            </xs:element>
+            <xs:element name="Lists" minOccurs="0" maxOccurs="1">
+                <xs:complexType>
+                    <xs:sequence>
+                        <xs:element name="list" type="TaxaListElementType" minOccurs="1" maxOccurs="unbounded" />
+                    </xs:sequence>
+                </xs:complexType>                
+            </xs:element>
+            <xs:element name="TaxaSynonyms" minOccurs="0" maxOccurs="1">
+                <xs:complexType>
+                    <xs:sequence>
+                        <xs:element name="synonym" type="TaxaSynonymElementType" minOccurs="1" maxOccurs="unbounded"/>
+                    </xs:sequence>
+                </xs:complexType>
+            </xs:element>            
+            <xs:element name="Stocks" minOccurs="0" maxOccurs="1">
+                <xs:complexType>
+                    <xs:sequence>
+                        <xs:element name="stock" type="StockElementType" minOccurs="1" maxOccurs="unbounded" />
+                    </xs:sequence>
+                </xs:complexType>
+            </xs:element>            
+        </xs:sequence>
+        <xs:attributeGroup ref="GenericAttrRowGroup" />    
+        <xs:attributeGroup ref="DeprecatedAttrGroup" />   
+        <xs:anyAttribute />                 
+    </xs:complexType>
+
+    <xs:complexType name="TaxaSynonymElementType">
+        <xs:sequence>
+            <xs:element name="id" type="xs:string" minOccurs="0" maxOccurs="1" />     
+            <xs:element name="idTaxa" type="xs:string" minOccurs="0" maxOccurs="1" />                         
+            <xs:element name="num" type="IntegerWithAnyAttributes" minOccurs="0" maxOccurs="1">
+                <xs:annotation>
+                    <xs:documentation>
+                        <imrd:imrDoc>
+                            <imrd:description lang="no">Unik identifikator for raden.</imrd:description>
+                            <imrd:description lang="en">Unique identifier for the row.</imrd:description>
+                        </imrd:imrDoc>
+                    </xs:documentation>
+                </xs:annotation>                   
+            </xs:element>       
+            <xs:element name="languageCode" type="StringWithAnyAttributes" minOccurs="0" maxOccurs="1">
+                <xs:annotation>
+                    <xs:documentation>
+                        <imrd:imrDoc>
+                            <imrd:description lang="no">Kode for språk dette navnet er på.</imrd:description>
+                            <imrd:description lang="en">Code for language this name is in.</imrd:description>
+                            <imrd:referenceTable href="http://tomcat7.imr.no:8080/apis/nmdapi/reference/v2/dataset/language?version=2.0"/>                                                                                                                  
+                        </imrd:imrDoc>
+                    </xs:documentation>
+                </xs:annotation>                 
+            </xs:element>
+            <xs:element name="language" type="StringWithAnyAttributes" minOccurs="0" maxOccurs="1">
+                <xs:annotation>
+                    <xs:documentation>
+                        <imrd:imrDoc>
+                            <imrd:description lang="no">Navn på språk dette navnet er på.</imrd:description>
+                            <imrd:description lang="en">Name of the language this name is in.</imrd:description>
+                            <imrd:referenceTable href="http://tomcat7.imr.no:8080/apis/nmdapi/reference/v2/dataset/language?version=2.0"/>                                                                                                                                              
+                        </imrd:imrDoc>
+                    </xs:documentation>
+                </xs:annotation>                  
+            </xs:element>
+            <xs:element name="name" type="StringWithAnyAttributes" minOccurs="0" maxOccurs="1">
+                <xs:annotation>
+                    <xs:documentation>
+                        <imrd:imrDoc>
+                            <imrd:description lang="no">Artsnavn.</imrd:description>
+                            <imrd:description lang="en">Species name.</imrd:description>
+                        </imrd:imrDoc>
+                    </xs:documentation>
+                </xs:annotation>                    
+            </xs:element>
+            <xs:element name="preferred" type="BooleanWithAnyAttributes" minOccurs="0" maxOccurs="1">
+                <xs:annotation>
+                    <xs:documentation>
+                        <imrd:imrDoc>
+                            <imrd:description lang="no">Hvis sann så er dette foretrukket navn.</imrd:description>
+                            <imrd:description lang="en">If true then this is the preferred name.</imrd:description>
+                        </imrd:imrDoc>
+                    </xs:documentation>
+                </xs:annotation>                  
+            </xs:element> 
+            <xs:element name="tradename" type="BooleanWithAnyAttributes" minOccurs="0" maxOccurs="1">
+                <xs:annotation>
+                    <xs:documentation>
+                        <imrd:imrDoc>
+                            <imrd:description lang="no">Hvis sann så er dette handels navnet.</imrd:description>
+                            <imrd:description lang="en">If true then this is the trade name.</imrd:description>
+                        </imrd:imrDoc>
+                    </xs:documentation>
+                </xs:annotation>                
+            </xs:element>                                    
+            <xs:element name="description" type="StringWithAnyAttributes" minOccurs="0" maxOccurs="1">
+                <xs:annotation>
+                    <xs:documentation>
+                        <imrd:imrDoc>
+                            <imrd:description lang="no">Spesiell beskrivelse av navnet.</imrd:description>
+                            <imrd:description lang="en">Description of the name.</imrd:description>
+                        </imrd:imrDoc>
+                    </xs:documentation>
+                </xs:annotation>                 
+            </xs:element>                        
+        </xs:sequence>
+        <xs:attributeGroup ref="GenericAttrRowGroup" />    
+        <xs:attributeGroup ref="DeprecatedAttrGroup" />  
+        <xs:anyAttribute />                                
+    </xs:complexType>
+
+    <!-- Stock element type. Used in taxa element-->
+    <xs:complexType name="StockElementType">
+        <xs:sequence>
+            <xs:element name="id" type="xs:string" minOccurs="0" maxOccurs="1" />      
+            <xs:element name="idTaxa" type="xs:string" minOccurs="0" maxOccurs="1" />     
+            <xs:element name="num" type="IntegerWithAnyAttributes" minOccurs="0" maxOccurs="1">
+                <xs:annotation>
+                    <xs:documentation>
+                        <imrd:imrDoc>
+                            <imrd:description lang="no">Unik identifikator for denne raden.</imrd:description>
+                            <imrd:description lang="en">Unique identifier for this row.</imrd:description>
+                        </imrd:imrDoc>
+                    </xs:documentation>
+                </xs:annotation>                      
+            </xs:element>                                                     
+            <xs:element name="name" type="StringWithAnyAttributes" minOccurs="0" maxOccurs="1">
+                <xs:annotation>
+                    <xs:documentation>
+                        <imrd:imrDoc>
+                            <imrd:description lang="no">Navn på underpopulasjon.</imrd:description>
+                            <imrd:description lang="en">Name of the stock.</imrd:description>
+                        </imrd:imrDoc>
+                    </xs:documentation>
+                </xs:annotation>                    
+            </xs:element> 
+            <xs:element name="description" type="StringWithAnyAttributes" minOccurs="0" maxOccurs="1">
+                <xs:annotation>
+                    <xs:documentation>
+                        <imrd:imrDoc>
+                            <imrd:description lang="no">Beskrivelse av underpopulasjon.</imrd:description>
+                            <imrd:description lang="en">Description of the stock.</imrd:description>
+                        </imrd:imrDoc>
+                    </xs:documentation>
+                </xs:annotation>  
+            </xs:element>
+            <xs:element name="restrictions" minOccurs="0" maxOccurs="1">
+                <xs:complexType>
+                    <xs:sequence>
+                        <xs:element name="restriction" type="RestrictionElementType" minOccurs="1" maxOccurs="unbounded" />
+                    </xs:sequence>
+                </xs:complexType>                
+            </xs:element>
+        </xs:sequence>
+        <xs:attributeGroup ref="GenericAttrRowGroup" />
+        <xs:attributeGroup ref="DeprecatedAttrGroup" />       
+        <xs:anyAttribute />   
+    </xs:complexType>
+
+    <!-- Restriction definition for either a taxa or a stock -->
+    <xs:complexType name="RestrictionElementType">
+        <xs:sequence>
+            <xs:element name="id" type="xs:string" minOccurs="0" maxOccurs="1" />   
+            <xs:element name="idParent" type="xs:string" minOccurs="0" maxOccurs="1" />      
+            <xs:element name="num" type="IntegerWithAnyAttributes" minOccurs="0" maxOccurs="1">
+                <xs:annotation>
+                    <xs:documentation>
+                        <imrd:imrDoc>
+                            <imrd:description lang="no">Unik identifikator for denne raden.</imrd:description>
+                            <imrd:description lang="en">Unique identifier for this row.</imrd:description>
+                        </imrd:imrDoc>
+                    </xs:documentation>
+                </xs:annotation>                   
+            </xs:element>                                                                
+            <xs:element name="name" type="StringWithAnyAttributes" minOccurs="0" maxOccurs="1">
+                <xs:annotation>
+                    <xs:documentation>
+                        <imrd:imrDoc>
+                            <imrd:description lang="no">Navn på begrensningen.</imrd:description>
+                            <imrd:description lang="en">Name of the constraint.</imrd:description>
+                        </imrd:imrDoc>
+                    </xs:documentation>
+                </xs:annotation>                   
+            </xs:element> 
+            <xs:element name="value" type="StringWithAnyAttributes" minOccurs="0" maxOccurs="1">
+                <xs:annotation>
+                    <xs:documentation>
+                        <imrd:imrDoc>
+                            <imrd:description lang="no">Verdi på begrensningen.</imrd:description>
+                            <imrd:description lang="en">Value of the constraint.</imrd:description>
+                        </imrd:imrDoc>
+                    </xs:documentation>
+                </xs:annotation>                 
+            </xs:element>
+            <xs:element name="description" type="StringWithAnyAttributes" minOccurs="0" maxOccurs="1">
+                <xs:annotation>
+                    <xs:documentation>
+                        <imrd:imrDoc>
+                            <imrd:description lang="no">Beskrivelse av begrensningen.</imrd:description>
+                            <imrd:description lang="en">Description of the restriction.</imrd:description>
+                        </imrd:imrDoc>
+                    </xs:documentation>
+                </xs:annotation>                  
+            </xs:element>            
+        </xs:sequence>
+        <xs:attributeGroup ref="GenericAttrRowGroup" /> 
+        <xs:attributeGroup ref="DeprecatedAttrGroup" /> 
+        <xs:anyAttribute />                
+    </xs:complexType>
+
+    <!-- Definition for a taxa list -->
+    <xs:complexType name="TaxaListElementType">
+        <xs:sequence>
+            <xs:element name="id" type="xs:string" minOccurs="0" maxOccurs="1" />       
+            <xs:element name="idTaxa" type="xs:string" minOccurs="0" maxOccurs="1" />
+            <xs:element name="num" type="IntegerWithAnyAttributes" minOccurs="0" maxOccurs="1">
+                <xs:annotation>
+                    <xs:documentation>
+                        <imrd:imrDoc>
+                            <imrd:description lang="no">Unik identifikator for denne raden.</imrd:description>
+                            <imrd:description lang="en">Unique identifier for this row.</imrd:description>
+                        </imrd:imrDoc>
+                    </xs:documentation>
+                </xs:annotation>               
+            </xs:element>    
+            <xs:element name="tablename" type="StringWithAnyAttributes" minOccurs="0" maxOccurs="1">
+                <xs:annotation>
+                    <xs:documentation>
+                        <imrd:imrDoc>
+                            <imrd:description lang="no">Skal ikke brukes.</imrd:description>
+                            <imrd:description lang="en">Do not use.</imrd:description>
+                        </imrd:imrDoc>
+                    </xs:documentation>
+                </xs:annotation>                    
+            </xs:element>                                             
+            <xs:element name="name" type="StringWithAnyAttributes" minOccurs="0" maxOccurs="1">
+                <xs:annotation>
+                    <xs:documentation>
+                        <imrd:imrDoc>
+                            <imrd:description lang="no">Navn på tabell.</imrd:description>
+                            <imrd:description lang="en">Name of the table.</imrd:description>
+                        </imrd:imrDoc>
+                    </xs:documentation>
+                </xs:annotation>                  
+            </xs:element>  
+            <xs:element name="sexCode" type="IntegerWithAnyAttributes" minOccurs="0" maxOccurs="1">
+                <xs:annotation>
+                    <xs:documentation>
+                        <imrd:imrDoc>
+                            <imrd:description lang="no">Kode for kjønn denne tabellen skal brukes på.</imrd:description>
+                            <imrd:description lang="en">Code of the sex this table is to be used on.</imrd:description>
+                        </imrd:imrDoc>
+                    </xs:documentation>
+                </xs:annotation>                  
+            </xs:element>
+            <xs:element name="sex" type="StringWithAnyAttributes" minOccurs="0" maxOccurs="1">
+                <xs:annotation>
+                    <xs:documentation>
+                        <imrd:imrDoc>
+                            <imrd:description lang="no">Kjønn denne tabellen skal brukes på.</imrd:description>
+                            <imrd:description lang="en">Sex this table is to be used on.</imrd:description>
+                        </imrd:imrDoc>
+                    </xs:documentation>
+                </xs:annotation>                   
+            </xs:element>
+            <xs:element name="property" type="StringWithAnyAttributes" minOccurs="0" maxOccurs="1">
+                <xs:annotation>
+                    <xs:documentation>
+                        <imrd:imrDoc>
+                            <imrd:description lang="no">Egenskap denne tabellen skal brukes på.</imrd:description>
+                            <imrd:description lang="en">Property this table is to be used on.</imrd:description>
+                        </imrd:imrDoc>
+                    </xs:documentation>
+                </xs:annotation>                 
+            </xs:element>
+            <xs:element name="description" type="StringWithAnyAttributes" minOccurs="0" maxOccurs="1">
+                <xs:annotation>
+                    <xs:documentation>
+                        <imrd:imrDoc>
+                            <imrd:description lang="no">Beskrivelse av bruk.</imrd:description>
+                            <imrd:description lang="en">Description of use.</imrd:description>
+                        </imrd:imrDoc>
+                    </xs:documentation>
+                </xs:annotation>                 
+            </xs:element>            
+        </xs:sequence>
+        <xs:attributeGroup ref="GenericAttrRowGroup" />  
+        <xs:attributeGroup ref="DeprecatedAttrGroup" />  
+        <xs:anyAttribute />        
+    </xs:complexType>
+
+    <!-- Sea areas element type -->
+    <xs:complexType name="SeaAreaElementType">
+        <xs:sequence>
+            <xs:element name="id" type="xs:string" minOccurs="0" maxOccurs="1" />                         
+            <xs:element name="code" type="StringWithAnyAttributes" minOccurs="0" maxOccurs="1">
+                <xs:annotation>
+                    <xs:documentation>
+                        <imrd:imrDoc>
+                            <imrd:description lang="no">Seadatanet unik kode for havområde.</imrd:description>
+                            <imrd:description lang="en">Seadatanet unique code for sea area.</imrd:description>
+                        </imrd:imrDoc>
+                    </xs:documentation>
+                </xs:annotation>   
+            </xs:element>  
+            <xs:element name="name" type="StringWithAnyAttributes" minOccurs="0" maxOccurs="1">
+                <xs:annotation>
+                    <xs:documentation>
+                        <imrd:imrDoc>
+                            <imrd:description lang="no">Seadatanet navn for havområde.</imrd:description>
+                            <imrd:description lang="en">Seadatanet name for sea area.</imrd:description>
+                        </imrd:imrDoc>
+                    </xs:documentation>
+                </xs:annotation>                  
+            </xs:element>
+            <xs:element name="description" type="StringWithAnyAttributes" minOccurs="0" maxOccurs="1">
+                <xs:annotation>
+                    <xs:documentation>
+                        <imrd:imrDoc>
+                            <imrd:description lang="no">Beskrivelse av hamområde.</imrd:description>
+                            <imrd:description lang="en">Description of sea area.</imrd:description>
+                        </imrd:imrDoc>
+                    </xs:documentation>
+                </xs:annotation>                  
+            </xs:element>            
+        </xs:sequence>
+        <xs:attributeGroup ref="GenericAttrRowGroup" />
+        <xs:attributeGroup ref="DeprecatedAttrGroup" />         
+        <xs:anyAttribute />       
+    </xs:complexType>
+
+    <!-- Institution type element -->
+    <xs:complexType name="InstitutionElementType">
+        <xs:sequence>
+            <xs:element name="id" type="xs:string" minOccurs="0" maxOccurs="1" />                         
+            <xs:element name="code" type="StringWithAnyAttributes" minOccurs="0" maxOccurs="1">
+                <xs:annotation>
+                    <xs:documentation>
+                        <imrd:imrDoc>
+                            <imrd:description lang="no">Unik kode for institusjon.</imrd:description>
+                            <imrd:description lang="en">Unique code forthe institution.</imrd:description>
+                        </imrd:imrDoc>
+                    </xs:documentation>
+                </xs:annotation>                 
+            </xs:element>  
+            <xs:element name="nationCode" type="StringWithAnyAttributes" minOccurs="0" maxOccurs="1">
+                <xs:annotation>
+                    <xs:documentation>
+                        <imrd:imrDoc>
+                            <imrd:description lang="no">Nasjonskode.</imrd:description>
+                            <imrd:description lang="en">Nation code.</imrd:description>
+                            <imrd:referenceTable href="http://tomcat7.imr.no:8080/apis/nmdapi/reference/v2/dataset/nation?version=2.0"/>                                                                                                                                                                          
+                        </imrd:imrDoc>
+                    </xs:documentation>
+                </xs:annotation>                  
+            </xs:element>
+            <xs:element name="nation" type="StringWithAnyAttributes" minOccurs="0" maxOccurs="1">
+                <xs:annotation>
+                    <xs:documentation>
+                        <imrd:imrDoc>
+                            <imrd:description lang="no">Nasjonnnavn.</imrd:description>
+                            <imrd:description lang="en">Nation name.</imrd:description>
+                            <imrd:referenceTable href="http://tomcat7.imr.no:8080/apis/nmdapi/reference/v2/dataset/nation?version=2.0"/>                                                                                                                                                                          
+                        </imrd:imrDoc>
+                    </xs:documentation>
+                </xs:annotation>                   
+            </xs:element>
+            <xs:element name="name" type="StringWithAnyAttributes" minOccurs="0" maxOccurs="1">
+                <xs:annotation>
+                    <xs:documentation>
+                        <imrd:imrDoc>
+                            <imrd:description lang="no">Navn på institusjon.</imrd:description>
+                            <imrd:description lang="en">Name of the institution.</imrd:description>
+                        </imrd:imrDoc>
+                    </xs:documentation>
+                </xs:annotation>                  
+            </xs:element>
+            <xs:element name="adress" type="StringWithAnyAttributes" minOccurs="0" maxOccurs="1">
+                <xs:annotation>
+                    <xs:documentation>
+                        <imrd:imrDoc>
+                            <imrd:description lang="no">Adresse på institusjon.</imrd:description>
+                            <imrd:description lang="en">Adress of the institution.</imrd:description>
+                        </imrd:imrDoc>
+                    </xs:documentation>
+                </xs:annotation>                    
+            </xs:element>
+            <xs:element name="phone" type="StringWithAnyAttributes" minOccurs="0" maxOccurs="1">
+                <xs:annotation>
+                    <xs:documentation>
+                        <imrd:imrDoc>
+                            <imrd:description lang="no">Telefonummer til institusjon.</imrd:description>
+                            <imrd:description lang="en">Phonenumber for the institution.</imrd:description>
+                        </imrd:imrDoc>
+                    </xs:documentation>
+                </xs:annotation>                 
+            </xs:element>
+            <xs:element name="email" type="StringWithAnyAttributes" minOccurs="0" maxOccurs="1">
+                <xs:annotation>
+                    <xs:documentation>
+                        <imrd:imrDoc>
+                            <imrd:description lang="no">Offisiell epost til institusjon.</imrd:description>
+                            <imrd:description lang="en">Official email for the institution.</imrd:description>
+                        </imrd:imrDoc>
+                    </xs:documentation>
+                </xs:annotation>                 
+            </xs:element>
+            <xs:element name="description" type="StringWithAnyAttributes" minOccurs="0" maxOccurs="1">
+                <xs:annotation>
+                    <xs:documentation>
+                        <imrd:imrDoc>
+                            <imrd:description lang="no">Beskrivelse av institusjon.</imrd:description>
+                            <imrd:description lang="en">Description of the institution.</imrd:description>
+                        </imrd:imrDoc>
+                    </xs:documentation>
+                </xs:annotation>                   
+            </xs:element>                        
+        </xs:sequence>
+        <xs:attributeGroup ref="GenericAttrRowGroup" />
+        <xs:attributeGroup ref="DeprecatedAttrGroup" />         
+        <xs:anyAttribute />
+    </xs:complexType>
+
+    <!-- 
+        This is used if a table is referenced from another one. 
+    -->
+    <xs:complexType name="TableRef">
+        <xs:simpleContent>
+            <xs:extension base="xs:string">
+                <xs:attribute name="key" type="xs:integer" />
+                <xs:anyAttribute />
+            </xs:extension>
+        </xs:simpleContent>
+    </xs:complexType>
+
+    <!--
+        Key value list element.
+    -->
+    <xs:complexType name="KeyValueElementType" >
+        <xs:sequence>
+            <xs:element name="id" type="xs:string" minOccurs="0" maxOccurs="1" />           
+            <xs:element name="idTableinfo" type="xs:string" minOccurs="0" maxOccurs="1" />               
+            <xs:element name="code" type="StringWithAnyAttributes" minOccurs="0" maxOccurs="1">
+                <xs:annotation>
+                    <xs:documentation>
+                        <imrd:imrDoc>
+                            <imrd:description lang="no">Unik kode for raden.</imrd:description>
+                            <imrd:description lang="en">Unique for the row.</imrd:description>
+                        </imrd:imrDoc>
+                    </xs:documentation>
+                </xs:annotation>                    
+            </xs:element>     
+            <xs:element name="value" type="StringWithAnyAttributes" minOccurs="0" maxOccurs="1">
+                <xs:annotation>
+                    <xs:documentation>
+                        <imrd:imrDoc>
+                            <imrd:description lang="no">Verdi, bruken er forskjell for forskjellige tabeller.</imrd:description>
+                            <imrd:description lang="en">Value, the use is different in different tables.</imrd:description>
+                        </imrd:imrDoc>
+                    </xs:documentation>
+                </xs:annotation>                    
+            </xs:element>    
+            <xs:element name="shortname" type="StringWithAnyAttributes" minOccurs="0" maxOccurs="1">
+                <xs:annotation>
+                    <xs:documentation>
+                        <imrd:imrDoc>
+                            <imrd:description lang="no">Kort navn.</imrd:description>
+                            <imrd:description lang="en">Short name.</imrd:description>
+                        </imrd:imrDoc>
+                    </xs:documentation>
+                </xs:annotation>                    
+            </xs:element>
+            <xs:element name="description" type="StringWithAnyAttributes" minOccurs="0" maxOccurs="1">
+                <xs:annotation>
+                    <xs:documentation>
+                        <imrd:imrDoc>
+                            <imrd:description lang="no">Lengere beskrivelse av data.</imrd:description>
+                            <imrd:description lang="en">Longer description of the data.</imrd:description>
+                        </imrd:imrDoc>
+                    </xs:documentation>
+                </xs:annotation>                  
+            </xs:element>
+        </xs:sequence>
+        <xs:attributeGroup ref="GenericAttrRowGroup" />    
+        <xs:attributeGroup ref="DeprecatedAttrGroup" />  
+        <xs:anyAttribute />           
+    </xs:complexType>           
+
+    <!--
+        CruiseSerie type.
+    -->
+    <xs:complexType name="CruiseSeriesType">
+        <xs:sequence>     
+            <xs:element name="id" type="xs:string" minOccurs="0" maxOccurs="1" />                         
+            <xs:element name="code" type="StringWithAnyAttributes" minOccurs="0" maxOccurs="1">
+                <xs:annotation>
+                    <xs:documentation>
+                        <imrd:imrDoc>
+                            <imrd:description lang="no">Unik kode for toktserie.</imrd:description>
+                            <imrd:description lang="en">Unique code for the cruiseseries.</imrd:description>
+                        </imrd:imrDoc>
+                    </xs:documentation>
+                </xs:annotation>                  
+            </xs:element>         
+            <xs:element name="name" type="StringWithAnyAttributes" minOccurs="1" maxOccurs="1">
+                <xs:annotation>
+                    <xs:documentation>
+                        <imrd:imrDoc>
+                            <imrd:description lang="no">Navn på toktserie.</imrd:description>
+                            <imrd:description lang="en">Name of the cruiseseries.</imrd:description>
+                        </imrd:imrDoc>
+                    </xs:documentation>
+                </xs:annotation>                     
+            </xs:element>
+            <xs:element name="shortname" type="StringWithAnyAttributes" minOccurs="1" maxOccurs="1">
+                <xs:annotation>
+                    <xs:documentation>
+                        <imrd:imrDoc>
+                            <imrd:description lang="no">Kort navn på toktserie.</imrd:description>
+                            <imrd:description lang="en">Short name of the cruiseseries.</imrd:description>
+                        </imrd:imrDoc>
+                    </xs:documentation>
+                </xs:annotation>                
+            </xs:element>
+            <xs:element name="description" type="StringWithAnyAttributes" minOccurs="0" maxOccurs="1">
+                <xs:annotation>
+                    <xs:documentation>
+                        <imrd:imrDoc>
+                            <imrd:description lang="no">Beskrivelse av toktserie.</imrd:description>
+                            <imrd:description lang="en">Description of the cruiseseries.</imrd:description>
+                        </imrd:imrDoc>
+                    </xs:documentation>
+                </xs:annotation>                
+            </xs:element>
+            <xs:element name="samples">
+                <xs:complexType>
+                    <xs:sequence>
+                        <xs:element name="sample" type="CruiseseriesSampleType" minOccurs="0" maxOccurs="unbounded" />
+                    </xs:sequence>                    
+                </xs:complexType>
+            </xs:element>
+        </xs:sequence>
+        <xs:attributeGroup ref="GenericAttrRowGroup" /> 
+        <xs:attributeGroup ref="DeprecatedAttrGroup" />   
+        <xs:anyAttribute />     
+    </xs:complexType>   
+
+    <!--
+        Coverage type.
+    -->
+    <xs:complexType name="CruiseseriesSampleType">
+        <xs:sequence>
+            <xs:element name="id" type="xs:string" minOccurs="0" maxOccurs="1" />  
+            <xs:element name="idCruiseseries" type="xs:string" minOccurs="0" maxOccurs="1" />                                                            
+            <xs:element name="sampleTime" type="StringWithAnyAttributes">
+                <xs:annotation>
+                    <xs:documentation>
+                        <imrd:imrDoc>
+                            <imrd:description lang="no">Kode som beskriver tiden for toktene under, dette kan være år 2009, eller hvis det er to periode per år 2009_1 og 2009_2.</imrd:description>
+                            <imrd:description lang="en">Code that describes the time for the cruises below. This could be per year like 2009 or if twice per year 2009_1 and 2009_2.</imrd:description>
+                        </imrd:imrDoc>
+                    </xs:documentation>
+                </xs:annotation>                 
+            </xs:element>
+            <xs:element name="description" type="StringWithAnyAttributes" minOccurs="0" maxOccurs="1">
+                <xs:annotation>
+                    <xs:documentation>
+                        <imrd:imrDoc>
+                            <imrd:description lang="no">Beskrivelse av prøven.</imrd:description>
+                            <imrd:description lang="en">Description for this sample.</imrd:description>
+                        </imrd:imrDoc>
+                    </xs:documentation>
+                </xs:annotation>                       
+            </xs:element>                        
+            <xs:element name="cruises">
+                <xs:complexType>
+                    <xs:sequence>
+                        <xs:element name="cruise" type="CruiseseriesCruiseType" minOccurs="0" maxOccurs="unbounded" />
+                    </xs:sequence>                    
+                </xs:complexType>
+            </xs:element>
+        </xs:sequence>
+        <xs:attributeGroup ref="GenericAttrRowGroup" />     
+        <xs:attributeGroup ref="DeprecatedAttrGroup" />    
+        <xs:anyAttribute />         
+    </xs:complexType>
+    
+    <!--
+        Cruise type.
+    -->
+    <xs:complexType name="CruiseseriesCruiseType">
+        <xs:sequence>
+            <xs:element name="id" type="xs:string" minOccurs="0" maxOccurs="1" />    
+            <xs:element name="idCruiseseriesSample" type="xs:string" minOccurs="0" maxOccurs="1" />                                               
+            <xs:element name="code" type="StringWithAnyAttributes" minOccurs="0" maxOccurs="1">
+                <xs:annotation>
+                    <xs:documentation>
+                        <imrd:imrDoc>
+                            <imrd:description lang="no">Unik kode.</imrd:description>
+                            <imrd:description lang="en">Unique code</imrd:description>
+                        </imrd:imrDoc>
+                    </xs:documentation>
+                </xs:annotation>                     
+            </xs:element>
+            <xs:element name="cruisenr" type="StringWithAnyAttributes" minOccurs="0" maxOccurs="1">
+                <xs:annotation>
+                    <xs:documentation>
+                        <imrd:imrDoc>
+                            <imrd:description lang="no">Toktkode.</imrd:description>
+                            <imrd:description lang="en">Cruisenumber.</imrd:description>
+                        </imrd:imrDoc>
+                    </xs:documentation>
+                </xs:annotation>                  
+            </xs:element>
+            <xs:element name="shipName" type="StringWithAnyAttributes" minOccurs="0" maxOccurs="1">
+                <xs:annotation>
+                    <xs:documentation>
+                        <imrd:imrDoc>
+                            <imrd:description lang="no">Navn på skip. (Dette er nødvendig fordi toktnummer ikke alltid unik.)</imrd:description>
+                            <imrd:description lang="en">Name of the ship. (This is neccesary because cruisecodes aren't always unique.)</imrd:description>
+                        </imrd:imrDoc>
+                    </xs:documentation>
+                </xs:annotation>                   
+            </xs:element>
+            <xs:element name="description" type="StringWithAnyAttributes" minOccurs="0" maxOccurs="1" />                                    
+        </xs:sequence>
+        <xs:attributeGroup ref="GenericAttrRowGroup" />
+        <xs:attributeGroup ref="DeprecatedAttrGroup" />
+        <xs:anyAttribute />          
+    </xs:complexType>      
+
+    <!--
+        SurveyTimeSerieType type.
+    -->
+    <xs:complexType name="SurveyTimeSeriesType">
+        <xs:sequence>
+            <xs:element name="id" type="xs:string" minOccurs="0" maxOccurs="1" />      
+            <xs:element name="code" type="StringWithAnyAttributes" minOccurs="1" maxOccurs="1">
+                <xs:annotation>
+                    <xs:documentation>
+                        <imrd:imrDoc>
+                            <imrd:description lang="no">Unik kode for serien.</imrd:description>
+                            <imrd:description lang="en">Unique code for the series.</imrd:description>
+                        </imrd:imrDoc>
+                    </xs:documentation>
+                </xs:annotation>                 
+            </xs:element>
+            <xs:element name="shortname" type="StringWithAnyAttributes" minOccurs="1" maxOccurs="1">
+                <xs:annotation>
+                    <xs:documentation>
+                        <imrd:imrDoc>
+                            <imrd:description lang="no">Kort navn på serien.</imrd:description>
+                            <imrd:description lang="en">short name for the series.</imrd:description>
+                        </imrd:imrDoc>
+                    </xs:documentation>
+                </xs:annotation>                 
+            </xs:element>         
+            <xs:element name="name" type="StringWithAnyAttributes" minOccurs="1" maxOccurs="1">
+                <xs:annotation>
+                    <xs:documentation>
+                        <imrd:imrDoc>
+                            <imrd:description lang="no">Navn på serien.</imrd:description>
+                            <imrd:description lang="en">Name for the series.</imrd:description>
+                        </imrd:imrDoc>
+                    </xs:documentation>
+                </xs:annotation>                 
+            </xs:element>                        
+            <xs:element name="description" type="StringWithAnyAttributes" minOccurs="0" maxOccurs="1">
+                <xs:annotation>
+                    <xs:documentation>
+                        <imrd:imrDoc>
+                            <imrd:description lang="no">Beskrivelse av serien.</imrd:description>
+                            <imrd:description lang="en">Description of the series.</imrd:description>
+                        </imrd:imrDoc>
+                    </xs:documentation>
+                </xs:annotation>                  
+            </xs:element>                                    
+            <xs:element name="cruiseSeries">
+                <xs:complexType>
+                    <xs:sequence>
+                        <xs:element name="cruiseSeries" type="SurveyTimeSeriesCruiseSeriesType" minOccurs="0" maxOccurs="unbounded" />
+                    </xs:sequence>
+                </xs:complexType>
+            </xs:element>            
+        </xs:sequence>
+        <xs:attributeGroup ref="GenericAttrRowGroup" />
+        <xs:attributeGroup ref="DeprecatedAttrGroup" />
+        <xs:anyAttribute />
+    </xs:complexType>
+
+    <!--
+    -->
+    <xs:complexType name="SurveyTimeSeriesCruiseSeriesType">
+        <xs:sequence>
+            <xs:element name="id" type="xs:string" minOccurs="0" maxOccurs="1" />       
+            <xs:element name="idSurveyTimeSeries" type="xs:string" minOccurs="0" maxOccurs="1" />                         
+            <xs:element name="cruiseSeriesCode" type="StringWithAnyAttributes" minOccurs="0" maxOccurs="1">
+                <xs:annotation>
+                    <xs:documentation>
+                        <imrd:imrDoc>
+                            <imrd:description lang="no">Kode for toktserien.</imrd:description>
+                            <imrd:description lang="en">Cruiseseries code.</imrd:description>
+                            <imrd:referenceTable href="http://tomcat7.imr.no:8080/apis/nmdapi/reference/v2/dataset/cruiseseries?version=2.0"/>                                                                                                                                              
+                        </imrd:imrDoc>
+                    </xs:documentation>
+                </xs:annotation>  
+            </xs:element> 
+            <xs:element name="cruiseSeries" type="StringWithAnyAttributes" minOccurs="0" maxOccurs="1">
+                <xs:annotation>
+                    <xs:documentation>
+                        <imrd:imrDoc>
+                            <imrd:description lang="no">Navn på toktserien.</imrd:description>
+                            <imrd:description lang="en">Name of the cruiseseries.</imrd:description>
+                            <imrd:referenceTable href="http://tomcat7.imr.no:8080/apis/nmdapi/reference/v2/dataset/cruiseseries?version=2.0"/>                                                                                                                                                                          
+                        </imrd:imrDoc>
+                    </xs:documentation>
+                </xs:annotation>                  
+            </xs:element>    
+            <xs:element name="description" type="StringWithAnyAttributes" minOccurs="0" maxOccurs="1">
+                <xs:annotation>
+                    <xs:documentation>
+                        <imrd:imrDoc>
+                            <imrd:description lang="no">Description.</imrd:description>
+                            <imrd:description lang="en">Beskrivelse.</imrd:description>
+                        </imrd:imrDoc>
+                    </xs:documentation>
+                </xs:annotation>                    
+            </xs:element>  
+            <xs:element name="samples">
+                <xs:complexType>
+                    <xs:sequence>
+                        <xs:element name="sample" type="SurveyTimeSeriesSampleType" minOccurs="0" maxOccurs="unbounded" />
+                    </xs:sequence>
+                </xs:complexType>
+            </xs:element>            
+        </xs:sequence>
+        <xs:attributeGroup ref="GenericAttrRowGroup" />
+        <xs:attributeGroup ref="DeprecatedAttrGroup" />  
+        <xs:anyAttribute />       
+    </xs:complexType>
+
+    <!--
+        Survey time series sample type.
+    -->
+    <xs:complexType name="SurveyTimeSeriesSampleType">
+        <xs:sequence>
+            <xs:element name="id" type="xs:string" minOccurs="0" maxOccurs="1" />
+            <xs:element name="idParent" type="xs:string" minOccurs="0" maxOccurs="1" />                 
+            <xs:element name="sampleTime" type="StringWithAnyAttributes" minOccurs="0" maxOccurs="1">
+                <xs:annotation>
+                    <xs:documentation>
+                        <imrd:imrDoc>
+                            <imrd:description lang="no">Tidspunkt. (Må være lik tidspunkt i toktserien.)</imrd:description>
+                            <imrd:description lang="en">Sample time. (Must be equal to the time in the cruiseseries.)</imrd:description>
+                        </imrd:imrDoc>
+                    </xs:documentation>
+                </xs:annotation>                  
+            </xs:element>
+            <xs:element name="stoxProject" type="StringWithAnyAttributes" minOccurs="0" maxOccurs="1">
+                <xs:annotation>
+                    <xs:documentation>
+                        <imrd:imrDoc>
+                            <imrd:description lang="no">Navn på STOX prosjektet.</imrd:description>
+                            <imrd:description lang="en">Name of the STOX project.</imrd:description>
+                        </imrd:imrDoc>
+                    </xs:documentation>
+                </xs:annotation>                  
+            </xs:element>            
+            <xs:element name="description" type="StringWithAnyAttributes" minOccurs="0" maxOccurs="1">
+                <xs:annotation>
+                    <xs:documentation>
+                        <imrd:imrDoc>
+                            <imrd:description lang="no">Beskrivelse.</imrd:description>
+                            <imrd:description lang="en">Description.</imrd:description>
+                        </imrd:imrDoc>
+                    </xs:documentation>
+                </xs:annotation>                  
+            </xs:element>  
+        </xs:sequence>
+        <xs:attributeGroup ref="GenericAttrRowGroup" />
+        <xs:attributeGroup ref="DeprecatedAttrGroup" />  
+        <xs:anyAttribute />        
+    </xs:complexType>
+
+    <!--
+        Fixed coastal station.
+    -->
+    <xs:complexType name="FixedCoastalstationType">
+        <xs:sequence>
+            <xs:element name="id" type="xs:string" minOccurs="0" maxOccurs="1" />             
+            <xs:element name="station" type="StringWithAnyAttributes" minOccurs="0" maxOccurs="1">
+                <xs:annotation>
+                    <xs:documentation>
+                        <imrd:imrDoc>
+                            <imrd:description lang="no">Unik stasjonskode.</imrd:description>
+                            <imrd:description lang="en">Unique stationcode.</imrd:description>
+                        </imrd:imrDoc>
+                    </xs:documentation>
+                </xs:annotation>                 
+            </xs:element>
+            <xs:element name="name" type="StringWithAnyAttributes" minOccurs="1" maxOccurs="1">
+                <xs:annotation>
+                    <xs:documentation>
+                        <imrd:imrDoc>
+                            <imrd:description lang="no">Navn på stasjon.</imrd:description>
+                            <imrd:description lang="en">Name of the station.</imrd:description>
+                        </imrd:imrDoc>
+                    </xs:documentation>
+                </xs:annotation>                 
+            </xs:element>
+            <xs:element name="description" type="StringWithAnyAttributes" minOccurs="0" maxOccurs="1">
+                <xs:annotation>
+                    <xs:documentation>
+                        <imrd:imrDoc>
+                            <imrd:description lang="no">Beskrivelse av stasjon.</imrd:description>
+                            <imrd:description lang="en">Description of the station.</imrd:description>
+                        </imrd:imrDoc>
+                    </xs:documentation>
+                </xs:annotation>                         
+            </xs:element>
+            <xs:element name="latitude" type="DecimalWithAnyAttributes" minOccurs="0" maxOccurs="1">
+                <xs:annotation>
+                    <xs:documentation>
+                        <imrd:imrDoc>
+                            <imrd:description lang="no">Breddegrad for stasjon.</imrd:description>
+                            <imrd:description lang="en">Latitude for the station.</imrd:description>
+                        </imrd:imrDoc>
+                    </xs:documentation>
+                </xs:annotation>                   
+            </xs:element>
+            <xs:element name="longitude" type="DecimalWithAnyAttributes" minOccurs="0" maxOccurs="1">
+                <xs:annotation>
+                    <xs:documentation>
+                        <imrd:imrDoc>
+                            <imrd:description lang="no">Lengdegrad for stasjon.</imrd:description>
+                            <imrd:description lang="en">Longitude for the station.</imrd:description>
+                        </imrd:imrDoc>
+                    </xs:documentation>
+                </xs:annotation>                                                                                                                                                                                       
+            </xs:element>
+            <xs:element name="coastalAreaCode" type="StringWithAnyAttributes" minOccurs="0" maxOccurs="1">
+                <xs:annotation>
+                    <xs:documentation>
+                        <imrd:imrDoc>
+                            <imrd:description lang="no">Kode for kystområde.</imrd:description>
+                            <imrd:description lang="en">Code for coastalarea.</imrd:description>
+                            <imrd:referenceTable href="http://tomcat7.imr.no:8080/apis/nmdapi/reference/v2/dataset/coastalarea?version=2.0"/>   
+                        </imrd:imrDoc>
+                    </xs:documentation>
+                </xs:annotation>
+            </xs:element>
+            <xs:element name="coastalArea" type="StringWithAnyAttributes" minOccurs="0" maxOccurs="1">
+                <xs:annotation>
+                    <xs:documentation>
+                        <imrd:imrDoc>
+                            <imrd:description lang="no">Navn på kystområde.</imrd:description>
+                            <imrd:description lang="en">Name of coastalarea.</imrd:description>
+                            <imrd:referenceTable href="http://tomcat7.imr.no:8080/apis/nmdapi/reference/v2/dataset/coastalarea?version=2.0"/>   
+                        </imrd:imrDoc>
+                    </xs:documentation>
+                </xs:annotation>                
+            </xs:element>
+            <xs:element name="substrateCode" type="StringWithAnyAttributes" minOccurs="0" maxOccurs="1">
+                <xs:annotation>
+                    <xs:documentation>
+                        <imrd:imrDoc>
+                            <imrd:description lang="no">Kode for hvordan bunnen er.</imrd:description>
+                            <imrd:description lang="en">Code for sea bottom type.</imrd:description>
+                            <imrd:referenceTable href="http://tomcat7.imr.no:8080/apis/nmdapi/reference/v2/dataset/substrate?version=2.0"/>   
+                        </imrd:imrDoc>
+                    </xs:documentation>
+                </xs:annotation>                      
+            </xs:element>
+            <xs:element name="substrate" type="StringWithAnyAttributes" minOccurs="0" maxOccurs="1">
+                <xs:annotation>
+                    <xs:documentation>
+                        <imrd:imrDoc>
+                            <imrd:description lang="no">Beskrivelse av bunnen.</imrd:description>
+                            <imrd:description lang="en">Description av the bottom.</imrd:description>
+                            <imrd:referenceTable href="http://tomcat7.imr.no:8080/apis/nmdapi/reference/v2/dataset/substrate?version=2.0"/>   
+                        </imrd:imrDoc>
+                    </xs:documentation>
+                </xs:annotation>                   
+            </xs:element>
+            <xs:element name="topographyCode" type="StringWithAnyAttributes" minOccurs="0" maxOccurs="1">
+                <xs:annotation>
+                    <xs:documentation>
+                        <imrd:imrDoc>
+                            <imrd:description lang="no">Topografi kode.</imrd:description>
+                            <imrd:description lang="en">Topography code.</imrd:description>
+                            <imrd:referenceTable href="http://tomcat7.imr.no:8080/apis/nmdapi/reference/v2/dataset/topography?version=2.0"/>   
+                        </imrd:imrDoc>
+                    </xs:documentation>
+                </xs:annotation>                 
+            </xs:element>
+            <xs:element name="topography" type="StringWithAnyAttributes" minOccurs="0" maxOccurs="1">
+                <xs:annotation>
+                    <xs:documentation>
+                        <imrd:imrDoc>
+                            <imrd:description lang="no">Topografi beskrivelse.</imrd:description>
+                            <imrd:description lang="en">Topography description.</imrd:description>
+                            <imrd:referenceTable href="http://tomcat7.imr.no:8080/apis/nmdapi/reference/v2/dataset/topography?version=2.0"/>   
+                        </imrd:imrDoc>
+                    </xs:documentation>
+                </xs:annotation>                 
+            </xs:element>
+            <xs:element name="exposureCode" type="StringWithAnyAttributes" minOccurs="0" maxOccurs="1">
+                <xs:annotation>
+                    <xs:documentation>
+                        <imrd:imrDoc>
+                            <imrd:description lang="no">Eksponering kode.</imrd:description>
+                            <imrd:description lang="en">Exposure code.</imrd:description>
+                            <imrd:referenceTable href="http://tomcat7.imr.no:8080/apis/nmdapi/reference/v2/dataset/exposure?version=2.0"/>   
+                        </imrd:imrDoc>
+                    </xs:documentation>
+                </xs:annotation>                  
+            </xs:element>
+            <xs:element name="exposure" type="StringWithAnyAttributes" minOccurs="0" maxOccurs="1">
+                <xs:annotation>
+                    <xs:documentation>
+                        <imrd:imrDoc>
+                            <imrd:description lang="no">Eksponering beskrivelse.</imrd:description>
+                            <imrd:description lang="en">Exposure description.</imrd:description>
+                            <imrd:referenceTable href="http://tomcat7.imr.no:8080/apis/nmdapi/reference/v2/dataset/exposure?version=2.0"/>   
+                        </imrd:imrDoc>
+                    </xs:documentation>
+                </xs:annotation>                     
+            </xs:element>
+            <xs:element name="maxDepth" type="DecimalWithAnyAttributes" minOccurs="0" maxOccurs="1">
+                <xs:annotation>
+                    <xs:documentation>
+                        <imrd:imrDoc>
+                            <imrd:description lang="no">Maks dybde.</imrd:description>
+                            <imrd:description lang="en">Max depth.</imrd:description>
+                        </imrd:imrDoc>
+                    </xs:documentation>
+                </xs:annotation>                 
+            </xs:element>
+            <xs:element name="gein1" type="DecimalWithAnyAttributes" minOccurs="0" maxOccurs="1">
+                <xs:annotation>
+                    <xs:documentation>
+                        <imrd:imrDoc>
+                            <imrd:description lang="no"></imrd:description>
+                            <imrd:description lang="en"></imrd:description>
+                        </imrd:imrDoc>
+                    </xs:documentation>
+                </xs:annotation>                 
+            </xs:element>
+            <xs:element name="gein2" type="DecimalWithAnyAttributes" minOccurs="0" maxOccurs="1">
+                <xs:annotation>
+                    <xs:documentation>
+                        <imrd:imrDoc>
+                            <imrd:description lang="no"></imrd:description>
+                            <imrd:description lang="en"></imrd:description>
+                        </imrd:imrDoc>
+                    </xs:documentation>
+                </xs:annotation>                    
+            </xs:element>
+            <xs:element name="startyear" type="IntegerWithAnyAttributes" minOccurs="0" maxOccurs="1">
+                <xs:annotation>
+                    <xs:documentation>
+                        <imrd:imrDoc>
+                            <imrd:description lang="no">Startår.</imrd:description>
+                            <imrd:description lang="en">Start year.</imrd:description>
+                        </imrd:imrDoc>
+                    </xs:documentation>
+                </xs:annotation>                 
+            </xs:element>
+            <xs:element name="endyear" type="IntegerWithAnyAttributes" minOccurs="0" maxOccurs="1">
+                <xs:annotation>
+                    <xs:documentation>
+                        <imrd:imrDoc>
+                            <imrd:description lang="no">Avsluttet år. Hvis blank så er det pågående.</imrd:description>
+                            <imrd:description lang="en">Finished year. If blank the is ongoing.</imrd:description>
+                        </imrd:imrDoc>
+                    </xs:documentation>
+                </xs:annotation>                    
+            </xs:element>
+        </xs:sequence>
+        <xs:attributeGroup ref="GenericAttrRowGroup" />
+        <xs:attributeGroup ref="DeprecatedAttrGroup" />  
+        <xs:anyAttribute />        
+    </xs:complexType>
+      
+    <!--
+        Fixed coastal station.
+    -->
+    <xs:complexType name="StationElementType">
+        <xs:sequence>
+            <xs:element name="id" type="xs:string" minOccurs="0" maxOccurs="1" />             
+            <xs:element name="code" type="StringWithAnyAttributes" minOccurs="0" maxOccurs="1">
+                <xs:annotation>
+                    <xs:documentation>
+                        <imrd:imrDoc>
+                            <imrd:description lang="no">Unik stasjonskode.</imrd:description>
+                            <imrd:description lang="en">Unique stationcode.</imrd:description>
+                        </imrd:imrDoc>
+                    </xs:documentation>
+                </xs:annotation>                   
+            </xs:element>
+            <xs:element name="name" type="StringWithAnyAttributes" minOccurs="0" maxOccurs="1">
+                <xs:annotation>
+                    <xs:documentation>
+                        <imrd:imrDoc>
+                            <imrd:description lang="no">Navn på stasjon.</imrd:description>
+                            <imrd:description lang="en">Name of station.</imrd:description>
+                        </imrd:imrDoc>
+                    </xs:documentation>
+                </xs:annotation>                   
+            </xs:element>
+            <xs:element name="description" type="StringWithAnyAttributes" minOccurs="0" maxOccurs="1">
+                <xs:annotation>
+                    <xs:documentation>
+                        <imrd:imrDoc>
+                            <imrd:description lang="no">Beskrivelse av stasjon.</imrd:description>
+                            <imrd:description lang="en">Description of the station.</imrd:description>
+                        </imrd:imrDoc>
+                    </xs:documentation>
+                </xs:annotation>                 
+            </xs:element>     
+        </xs:sequence>       
+        <xs:attributeGroup ref="GenericAttrRowGroup" />
+        <xs:attributeGroup ref="DeprecatedAttrGroup" />     
+        <xs:anyAttribute />     
+    </xs:complexType>
+    <!--
+        Samplegroup
+    -->
+    <xs:complexType name="CSRSampleGroupElementType">
+        <xs:sequence>
+            <xs:element name="id" type="xs:string" minOccurs="0" maxOccurs="1" />             
+            <xs:element name="groupCode" type="StringWithAnyAttributes" minOccurs="0" maxOccurs="1">
+                <xs:annotation>
+                    <xs:documentation>
+                        <imrd:imrDoc>
+                            <imrd:description lang="no">Unik kode for denne CSR gruppen.</imrd:description>
+                            <imrd:description lang="en">Unique code for this CSR group.</imrd:description>
+                        </imrd:imrDoc>
+                    </xs:documentation>
+                </xs:annotation>                   
+            </xs:element>
+            <xs:element name="group" type="StringWithAnyAttributes" minOccurs="0" maxOccurs="1">
+                <xs:annotation>
+                    <xs:documentation>
+                        <imrd:imrDoc>
+                            <imrd:description lang="no">Navn på denne CSR gruppen.</imrd:description>
+                            <imrd:description lang="en">Name for this CSR group.</imrd:description>
+                        </imrd:imrDoc>
+                    </xs:documentation>
+                </xs:annotation>                   
+            </xs:element>
+        </xs:sequence>       
+        <xs:attributeGroup ref="GenericAttrRowGroup" />
+        <xs:attributeGroup ref="DeprecatedAttrGroup" />     
+        <xs:anyAttribute />     
+    </xs:complexType>  
+    <!--
+        Samplegroup
+    -->
+    <xs:complexType name="CSRSampleTypeElementType">
+        <xs:sequence>
+            <xs:element name="id" type="xs:string" minOccurs="0" maxOccurs="1" />             
+            <xs:element name="typeCode" type="StringWithAnyAttributes" minOccurs="0" maxOccurs="1">
+                <xs:annotation>
+                    <xs:documentation>
+                        <imrd:imrDoc>
+                            <imrd:description lang="no">Unik kode for denne CSR typen.</imrd:description>
+                            <imrd:description lang="en">Unique code for this CSR type.</imrd:description>
+                        </imrd:imrDoc>
+                    </xs:documentation>
+                </xs:annotation>                 
+            </xs:element>
+            <xs:element name="type" type="StringWithAnyAttributes" minOccurs="0" maxOccurs="1">
+                <xs:annotation>
+                    <xs:documentation>
+                        <imrd:imrDoc>
+                            <imrd:description lang="no">Navn på denne CSR typen.</imrd:description>
+                            <imrd:description lang="en">Name for this CSR type.</imrd:description>
+                        </imrd:imrDoc>
+                    </xs:documentation>
+                </xs:annotation>                 
+            </xs:element>
+        </xs:sequence>       
+        <xs:attributeGroup ref="GenericAttrRowGroup" />
+        <xs:attributeGroup ref="DeprecatedAttrGroup" />     
+        <xs:anyAttribute />     
+    </xs:complexType>       
+    
+    <!--
+        Generic type used for all list elements.
+    -->
+    <xs:attributeGroup name="DeprecatedAttrGroup">       
+        <xs:attribute name="deprecated" type="xs:boolean"/>
+        <xs:attribute name="newKey" type="xs:string"/>
+        <xs:attribute name="validFrom" type="xs:dateTime"/>
+        <xs:attribute name="validTo" type="xs:dateTime"/>
+    </xs:attributeGroup>    
+    
+    <!--
+        Generic type
+    -->
+    <xs:attributeGroup name="GenericAttrRowGroup">       
+        <xs:attribute name="updatedTime" type="xs:dateTime"/>
+        <xs:attribute name="updatedBy" type="xs:string"/>
+        <xs:attribute name="insertedTime" type="xs:dateTime"/>
+        <xs:attribute name="insertedBy" type="xs:string"/>
+        <xs:anyAttribute />
+    </xs:attributeGroup>               
+    
+    <!--
+        List of tables.
+    -->
+    <xs:complexType name="Table">
+        <xs:sequence>
+            <xs:element name="row" type="TableRow" />
+        </xs:sequence>        
+    </xs:complexType>
+    
+    <!--
+        Row for a table description.
+    -->
+    <xs:complexType name="TableRow">
+        <xs:simpleContent>
+            <xs:extension base="xs:string">
+                <xs:attribute name="description" type="xs:string" use="optional" />
+                <xs:attribute name="changedDate" type="xs:dateTime" use="optional" />
+                <xs:attribute name="createdDate" type="xs:dateTime" use="optional" />
+                <xs:anyAttribute />
+            </xs:extension>
+        </xs:simpleContent>
+    </xs:complexType>           
+    
+    <!--
+        List type.
+    -->
+    <xs:complexType name="ListType">
+        <xs:sequence>
+            <xs:element name="row" type="xs:anyType" minOccurs="0" maxOccurs="unbounded"/>
+        </xs:sequence>
+    </xs:complexType>
+    
+    <xs:complexType name="StringWithAnyAttributes">
+        <xs:simpleContent>
+            <xs:extension base="xs:string">
+                <xs:anyAttribute />
+            </xs:extension>
+        </xs:simpleContent>
+    </xs:complexType>    
+    
+    <xs:complexType name="IntegerWithAnyAttributes">
+        <xs:simpleContent>
+            <xs:extension base="xs:integer">
+                <xs:anyAttribute />
+            </xs:extension>
+        </xs:simpleContent>
+    </xs:complexType>
+    
+    <xs:complexType name="DecimalWithAnyAttributes">
+        <xs:simpleContent>
+            <xs:extension base="xs:decimal">
+                <xs:anyAttribute />
+            </xs:extension>
+        </xs:simpleContent>
+    </xs:complexType>    
+    
+    <xs:complexType name="BooleanWithAnyAttributes">
+        <xs:simpleContent>
+            <xs:extension base="xs:boolean">
+                <xs:anyAttribute />
+            </xs:extension>
+        </xs:simpleContent>
+    </xs:complexType>
+
+    <xs:complexType name="DateWithAnyAttributes">
+        <xs:simpleContent>
+            <xs:extension base="xs:date">
+                <xs:anyAttribute />
+            </xs:extension>
+        </xs:simpleContent>
+    </xs:complexType>
+
+    <xs:complexType name="DateTimeWithAnyAttributes">
+        <xs:simpleContent>
+            <xs:extension base="xs:dateTime">
+                <xs:anyAttribute />
+            </xs:extension>
+        </xs:simpleContent>
+    </xs:complexType>
+    
+</xs:schema>
