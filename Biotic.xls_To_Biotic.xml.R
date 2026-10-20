@@ -4,6 +4,9 @@ library(shiny)
 library(bslib)       # Theme colours
 library(readxl)
 library(xml2)
+if (!exists("validate_biotic", mode = "function")) {
+  for (h in file.path("helpers", c("code_lists.R", "taxonomy.R", "validation.R"))) source(h, local = TRUE)
+}
 
 # --- NMDBiotic v3.1 element order ---
 # Child elements are an xs:sequence in bioticv3_1.xsd, so they must be written
@@ -317,6 +320,16 @@ ui <- fluidPage(
                 buttonLabel = "Browse…",
                 placeholder = "No file"
               ),
+              fileInput(
+                inputId = "xmlValidateFile",
+                label   = tagList(
+                  tags$i(class = "fas fa-clipboard-check", style = "margin-right:6px;"),
+                  "…or validate an existing Biotic XML"
+                ),
+                accept      = c(".xml"),
+                buttonLabel = "Browse…",
+                placeholder = "No file"
+              ),
 
               tags$hr(),
 
@@ -328,6 +341,7 @@ ui <- fluidPage(
                 ),
                 class    = "btn-primary"
               ),
+              checkboxInput("overrideErrors", "Allow the download even if validation finds errors", FALSE),
 
               tags$hr(),
 
@@ -343,6 +357,20 @@ ui <- fluidPage(
 
         mainPanel(
           width = 8,
+          div(class = "card-custom mb-3",
+              div(class = "card-title",
+                  tags$i(class = "fas fa-clipboard-check"),
+                  span("Validation")
+              ),
+              uiOutput("validationSummary"),
+              DT::DTOutput("validationTable"),
+              div(class = "mt-2 d-flex flex-wrap gap-2",
+                  downloadButton("downloadFindings", "Download findings (CSV)", class = "btn-outline-secondary btn-sm"),
+                  actionButton("checkWorms", "Check unresolved names in WoRMS", icon = icon("globe"),
+                               class = "btn-outline-primary btn-sm")
+              ),
+              uiOutput("wormsCheckResult")
+          ),
           div(class = "card-custom",
               div(class = "card-title",
                   tags$i(class = "fas fa-code"),
@@ -501,6 +529,95 @@ server <- function(input, output, session) {
       xml2::write_xml(xmlDoc(), file, options = "format")
     }
   )
+
+  # 5. Validation: data checks, NMD schema and read-back with StoX's reader
+  cl <- code_lists_get(session)
+
+  convertedValidation <- reactive({
+    req(excelData(), xmlDoc())
+    tabs <- lapply(excelData(), as.data.frame)
+    withProgress(message = "Validating...", value = 0.3, {
+      f_data <- validate_biotic(tabs, cl$lists)
+      incProgress(0.4)
+      tmp <- tempfile(fileext = ".xml")
+      xml2::write_xml(xmlDoc(), tmp)
+      f_schema <- validate_xml_schema(tmp, "biotic")
+      counts <- xml_element_counts(xmlDoc(), c("fishstation", "catchsample", "individual"))
+      f_read <- readback_xml(tmp, "biotic", counts)
+      rbind(f_data, f_schema, f_read)
+    })
+  })
+
+  uploadedValidation <- reactive({
+    req(input$xmlValidateFile)
+    p <- input$xmlValidateFile$datapath
+    withProgress(message = "Validating the uploaded XML...", value = 0.3, {
+      f_schema <- validate_xml_schema(p, "biotic")
+      tabs <- tryCatch(biotic_tables_from_xml(p), error = function(e) e)
+      if (inherits(tabs, "error")) {
+        fc <- findings_collector()
+        fc$add("error", "read-back", "READBACK_FAILED", "file", paste("StoX's reader could not read the file:", conditionMessage(tabs)))
+        return(rbind(fc$get(), f_schema))
+      }
+      rbind(validate_biotic(tabs, cl$lists), f_schema)
+    })
+  })
+
+  # The panel shows whichever was produced last: the converted file or an upload
+  shownValidation <- reactiveVal(NULL)
+  observeEvent(convertedValidation(), shownValidation(list(what = "the converted Biotic_LPA data",
+                                                           f = convertedValidation())))
+  observeEvent(uploadedValidation(), shownValidation(list(what = paste("the uploaded file", input$xmlValidateFile$name),
+                                                          f = uploadedValidation())))
+
+  output$validationSummary <- renderUI({
+    v <- shownValidation()
+    if (is.null(v)) return(p(class = "text-muted small", "Load a Biotic_LPA workbook, or an existing Biotic XML, to validate it."))
+    tagList(p(class = "small mb-1", "Results for ", strong(v$what), ":"), findings_badges(v$f))
+  })
+  output$validationTable <- DT::renderDT({
+    v <- shownValidation()
+    req(v)
+    findings_dt(v$f)
+  })
+  output$downloadFindings <- downloadHandler(
+    filename = function() paste0("Biotic_validation_", Sys.Date(), ".csv"),
+    content = function(file) {
+      v <- shownValidation()
+      utils::write.csv(if (is.null(v)) data.frame() else v$f, file, row.names = FALSE)
+    }
+  )
+
+  # Errors in the converted data block the download unless overridden
+  observe({
+    f <- tryCatch(convertedValidation(), error = function(e) NULL)
+    ok <- !is.null(f) && (sum(f$severity == "error") == 0 || isTRUE(input$overrideErrors))
+    shinyjs::toggleState("downloadXML", condition = ok)
+  })
+
+  wormsCheck <- reactiveVal(NULL)
+  observeEvent(input$checkWorms, {
+    v <- shownValidation()
+    nm <- if (is.null(v)) character(0) else v$f$where[v$f$check == "TAX_UNRESOLVED"]
+    if (!length(nm)) {
+      wormsCheck("No unresolved names to check.")
+      return()
+    }
+    withProgress(message = "Checking names in WoRMS…", value = 0.4, {
+      wormsCheck(taxonomy_check_worms(nm))
+    })
+  })
+  output$wormsCheckResult <- renderUI({
+    res <- wormsCheck()
+    if (is.null(res)) return(NULL)
+    if (is.character(res)) return(div(class = "alert alert-info small mt-2", res))
+    tagList(h6(class = "mt-3", "WoRMS check"), tableOutput("wormsCheckTable"))
+  })
+  output$wormsCheckTable <- renderTable({
+    res <- wormsCheck()
+    req(is.data.frame(res))
+    res[, intersect(c("query", "worms_status", "valid_name", "valid_AphiaID", "note"), names(res)), drop = FALSE]
+  }, striped = TRUE, spacing = "xs")
 }
 
 # Launch the application

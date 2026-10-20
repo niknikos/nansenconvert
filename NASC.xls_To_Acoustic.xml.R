@@ -12,6 +12,8 @@ library(writexl)
 library(dplyr)
 library(lubridate)
 library(DT)
+if (!exists("acocat_nansen", mode = "function")) source(file.path("helpers", "code_lists.R"), local = TRUE)
+if (!exists("validate_species_percent", mode = "function")) source(file.path("helpers", "validation.R"), local = TRUE)
 
 # ---------------------------------------------------------------
 # 0.a) Acoustic settings written to <frequency>/<distance>
@@ -23,7 +25,8 @@ NASC_ACOUSTIC_DEFAULTS <- list(
   threshold              = -70,
   pel_ch_thickness       = 10,
   upper_interpret_depth  = 10,
-  lower_integrator_depth = 500
+  lower_integrator_depth = 500,
+  acocat_level           = "specific"
 )
 
 # ---------------------------------------------------------------
@@ -114,7 +117,8 @@ nasc_dist_nmi <- function(lat1, lon1, lat2, lon2) {
   d
 }
 
-build_lpa_from_nasc_staged <- function(df_nasc, md, settings = NASC_ACOUSTIC_DEFAULTS) {
+build_lpa_from_nasc_staged <- function(df_nasc, md, settings = NASC_ACOUSTIC_DEFAULTS,
+                                       acocat_map = NULL) {
   # Optional Echoview columns used for the sailed distance when present
   for (cn in c("VL_start", "VL_end", "Dist_S", "Dist_E")) {
     df_nasc[[cn]] <- if (cn %in% names(df_nasc)) {
@@ -136,28 +140,16 @@ build_lpa_from_nasc_staged <- function(df_nasc, md, settings = NASC_ACOUSTIC_DEF
     arrange(.t_start, Interval, Layer)
   df_nasc$distance_id <- match(df_nasc$.cell, unique(df_nasc$.cell))
 
-  df_nasc <- df_nasc %>%
-    mutate(
-      acocat = case_when(
-        Species_name == "Sardina pilchardus"         ~ 1,
-        Species_name == "Engraulis encrasicolus"    ~ 2,
-        Species_name == "Scomber colias"            ~ 3,
-        Species_name == "Trachurus trachurus"       ~ 4,
-        Species_name == "Trachurus trecae"          ~ 5,
-        Species_name == "Trachurus picturatus"      ~ 6,
-        Species_name == "Trachurus mediterraneus"   ~ 7,
-        Species_name == "Sardinella aurita"         ~ 8,
-        Species_name == "Sardinella maderensis"     ~ 9,
-        Species_name == "Macroramphosus scolopax"   ~ 10,
-        Species_name == "Macroramphosus gracilis"   ~ 11,
-        Species_name == "Scomber scombrus"          ~ 12,
-        Species_name == "Caranx rhonchus"           ~ 13,
-        Species_name %in% c("Plancton", "Plankton")          ~ 14,
-        Species_name %in% c("Mesopelagique", "Mesopelagic")  ~ 15,
-        Species_name %in% c("Autres", "Others")              ~ 16,
-        TRUE                                         ~ 16
-      )
-    )
+  # Acoustic category of each Species_name: the EAF-Nansen codes from
+  # nansentaxonomy unless a mapping (name, acocat) is supplied
+  if (is.null(acocat_map)) {
+    acocat_map <- acocat_nansen(unique(df_nasc$Species_name), level = settings$acocat_level)
+  }
+  df_nasc$acocat <- suppressWarnings(as.integer(
+    acocat_map$acocat[match(df_nasc$Species_name, acocat_map$name)]
+  ))
+  acocat_used <- acocat_map[acocat_map$name %in% df_nasc$Species_name, , drop = FALSE]
+  acocat_used$rows <- as.integer(table(df_nasc$Species_name)[acocat_used$name])
 
   df_root_metadata <- data.frame(
     report_time  = md$report_time,
@@ -289,7 +281,8 @@ build_lpa_from_nasc_staged <- function(df_nasc, md, settings = NASC_ACOUSTIC_DEF
     nasc_processed = df_nasc,
     notes          = list(
       length_source = table(len_source),
-      log_source    = log_source
+      log_source    = log_source,
+      acocat_used   = acocat_used
     ),
     lpa_sheets     = list(
       root_metadata = df_root_metadata,
@@ -332,8 +325,12 @@ ui <- fluidPage(
       h4("Metadata"),
       textInput("md_report_time",   "report_time",      value = ""),
       textInput("md_lsss_version",  "lsss_version",     value = ""),
-      textInput("md_nation",        "nation",           value = ""),
-      textInput("md_platform",      "platform (integer code)", value = ""),
+      selectizeInput("md_nation",   "nation (code)",
+                     choices = code_list_choices("nation", code_lists_default()),
+                     options = list(create = TRUE, placeholder = "Choose or type a code")),
+      selectizeInput("md_platform", "platform (integer code)",
+                     choices = code_list_choices("platform", code_lists_default()),
+                     options = list(create = TRUE, placeholder = "Choose or type a code")),
       textInput("md_cruise",        "cruise",           value = ""),
       tags$hr(),
 
@@ -345,6 +342,10 @@ ui <- fluidPage(
       numericInput("set_pel_ch_thickness",       "Pelagic channel thickness (m)",   value = NASC_ACOUSTIC_DEFAULTS$pel_ch_thickness),
       numericInput("set_upper_interpret_depth",  "Upper interpretation depth (m)",  value = NASC_ACOUSTIC_DEFAULTS$upper_interpret_depth),
       numericInput("set_lower_integrator_depth", "Lower integration depth (m)",     value = NASC_ACOUSTIC_DEFAULTS$lower_integrator_depth),
+      selectInput("set_acocat_level", "Acoustic categories (acocat)",
+                  choices = c("Specific where defined (e.g. PILCH, ANCHO)" = "specific",
+                              "Broad only (PEL1, PEL2, MESFI, BOTT, OTHER)" = "broad"),
+                  selected = NASC_ACOUSTIC_DEFAULTS$acocat_level),
       tags$hr(),
 
       # 4. Action buttons
@@ -397,12 +398,19 @@ server <- function(input, output, session) {
       threshold              = num_or(input$set_threshold,              NASC_ACOUSTIC_DEFAULTS$threshold),
       pel_ch_thickness       = num_or(input$set_pel_ch_thickness,       NASC_ACOUSTIC_DEFAULTS$pel_ch_thickness),
       upper_interpret_depth  = num_or(input$set_upper_interpret_depth,  NASC_ACOUSTIC_DEFAULTS$upper_interpret_depth),
-      lower_integrator_depth = num_or(input$set_lower_integrator_depth, NASC_ACOUSTIC_DEFAULTS$lower_integrator_depth)
+      lower_integrator_depth = num_or(input$set_lower_integrator_depth, NASC_ACOUSTIC_DEFAULTS$lower_integrator_depth),
+      acocat_level           = if (is.null(input$set_acocat_level)) NASC_ACOUSTIC_DEFAULTS$acocat_level else input$set_acocat_level
     )
   }
 
+  # Code lists shared with the other converters (Nansen or Custom)
+  cl <- code_lists_get(session)
+
   apply_nasc_staged <- function(df_staged) {
-    res <- build_lpa_from_nasc_staged(df_staged, nasc_md(input), nasc_settings(input))
+    s <- nasc_settings(input)
+    acocat_map <- acocat_map_for(unique(df_staged$Species_name), cl$lists, s$acocat_level)
+    res <- build_lpa_from_nasc_staged(df_staged, nasc_md(input), s, acocat_map = acocat_map)
+    rv$species_pct <- validate_species_percent(df_staged)
     rv$nasc_raw       <- res$nasc_raw
     rv$nasc_processed <- res$nasc_processed
     rv$lpa_sheets     <- res$lpa_sheets
@@ -416,7 +424,8 @@ server <- function(input, output, session) {
       input$md_platform, input$md_cruise,
       input$set_freq, input$set_transceiver, input$set_threshold,
       input$set_pel_ch_thickness, input$set_upper_interpret_depth,
-      input$set_lower_integrator_depth
+      input$set_lower_integrator_depth, input$set_acocat_level,
+      cl$lists
     ),
     {
       req(rv$nasc_staged)
@@ -424,6 +433,16 @@ server <- function(input, output, session) {
     },
     ignoreInit = TRUE
   )
+
+  # Nation and platform choices follow the active code lists
+  observeEvent(cl$lists, {
+    for (id in c("nation", "platform")) {
+      inp <- paste0("md_", id)
+      updateSelectizeInput(session, inp, choices = code_list_choices(id, cl$lists),
+                           selected = isolate(input[[inp]]),
+                           options = list(create = TRUE, placeholder = "Choose or type a code"))
+    }
+  }, ignoreInit = TRUE)
 
   # Flags that show the previews
   show_nasc_preview <- reactiveVal(FALSE)
@@ -541,6 +560,25 @@ server <- function(input, output, session) {
         strong("Interval length (integrator_dist) from: "), len_src, br(),
         strong("log_start from: "), if (is.null(notes$log_source)) "-" else notes$log_source
       ),
+      {
+        sp <- rv$species_pct
+        if (is.null(sp) || !nrow(sp)) {
+          p(strong("Species_percent: "), "adds up to 100 in every region.")
+        } else {
+          tagList(
+            p(strong("Species_percent: "), sum(sp$where != "..."),
+              " region(s) where the species shares do not add up to 100",
+              if (any(sp$where == "...")) " (first ones shown)", ":"),
+            tableOutput("tbl_species_pct")
+          )
+        }
+      },
+      if (!is.null(notes$acocat_used) && nrow(notes$acocat_used)) {
+        tagList(
+          strong("Acoustic categories used:"),
+          tableOutput("tbl_acocat_used")
+        )
+      },
       tags$hr(),
       if (!is.null(rv$qc_last_msg) && nzchar(rv$qc_last_msg)) {
         qc_cls <- if (grepl("^<strong>Nothing removed", rv$qc_last_msg)) {
@@ -552,6 +590,21 @@ server <- function(input, output, session) {
       } else NULL
     )
   })
+
+  output$tbl_species_pct <- renderTable({
+    sp <- rv$species_pct
+    req(sp, nrow(sp))
+    data.frame(Region = sp$where, Problem = sp$message, check.names = FALSE)
+  }, striped = TRUE, spacing = "xs")
+
+  output$tbl_acocat_used <- renderTable({
+    a <- rv$lpa_notes$acocat_used
+    req(a, nrow(a))
+    data.frame(
+      Species_name = a$name, acocat = a$acocat, category = a$acousticCategory,
+      from = a$source, rows = a$rows, check.names = FALSE
+    )
+  }, striped = TRUE)
 
   observeEvent(input$btn_drop_bad_coords, {
     req(rv$nasc_staged)
@@ -691,6 +744,4 @@ server <- function(input, output, session) {
 # ---------------------------------------------------------------
 # 3) Launch the application
 # ---------------------------------------------------------------
-shinyApp(ui = ui, server = server)
-NA
 shinyApp(ui = ui, server = server)

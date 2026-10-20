@@ -15,6 +15,9 @@ library(xml2)
 library(dplyr)
 library(purrr)
 library(fontawesome)
+if (!exists("validate_acoustic", mode = "function")) {
+  for (h in file.path("helpers", c("code_lists.R", "taxonomy.R", "validation.R"))) source(h, local = TRUE)
+}
 # ---------------------------------------------------------------
 # 1.b) Building the NMD Echosounder v1 XML
 # ---------------------------------------------------------------
@@ -182,6 +185,22 @@ ui <- fluidPage(
               placeholder = "Select an .xlsx file",
               width = "100%"
             ),
+            fileInput(
+              inputId = "aco_biotic_file",
+              label = tagList(fa("fish"), "Biotic data for the trawl check (optional)"),
+              accept = c(".xlsx", ".xml"),
+              buttonLabel = "Browse…",
+              placeholder = "Biotic_LPA.xlsx or Biotic XML",
+              width = "100%"
+            ),
+            fileInput(
+              inputId = "aco_validate_xml",
+              label = tagList(fa("clipboard-check"), "…or validate an existing Acoustic XML"),
+              accept = c(".xml"),
+              buttonLabel = "Browse…",
+              placeholder = "Select an .xml file",
+              width = "100%"
+            ),
             hr(),
             div(
               class = "d-grid gap-3",
@@ -195,7 +214,8 @@ ui <- fluidPage(
                 label = tagList(fa("download"), "Export Acoustic XML"),
                 class = "btn-primary btn-lg"
               )
-            )
+            ),
+            checkboxInput("aco_override", "Allow the export even if validation finds errors", FALSE)
           )
         )
       ),
@@ -216,6 +236,21 @@ ui <- fluidPage(
                 class = "bg-light p-3 rounded pre-scrollable",
                 style = "min-height: 200px; max-height: 400px;"
               )
+          )
+        ),
+        # Validation
+        div(
+          class = "card shadow-sm mb-4",
+          div(
+            class = "card-header bg-primary text-white",
+            h4(class = "mb-0", "Validation")
+          ),
+          div(
+            class = "card-body",
+            uiOutput("aco_validation_summary"),
+            DT::DTOutput("aco_validation_table"),
+            downloadButton("aco_download_findings", "Download findings (CSV)",
+                           class = "btn-outline-secondary btn-sm mt-2")
           )
         ),
         # Data preview
@@ -465,10 +500,102 @@ server <- function(input, output, session) {
     },
     contentType = "application/xml"
   )
+  # ---------------------------------------------------------------
+  # 3.4. Validation: sheet checks, then NMD schema and read-back once the
+  #      XML is built; optional Biotic data for the trawl check
+  # ---------------------------------------------------------------
+  cl <- code_lists_get(session)
+  # A new workbook needs a new XML
+  observeEvent(input$excel_file, xml_path(NULL), priority = 10)
+
+  acocat_level <- reactive({
+    # Shared with the NASC tab when both run in the combined app
+    if (is.null(input$set_acocat_level)) "specific" else input$set_acocat_level
+  })
+
+  bioticTables <- reactive({
+    f <- input$aco_biotic_file
+    if (is.null(f)) return(NULL)
+    tryCatch({
+      if (tolower(tools::file_ext(f$name)) == "xml") {
+        biotic_tables_from_xml(f$datapath)
+      } else {
+        rd <- function(s) as.data.frame(read_excel(f$datapath, sheet = s, col_types = "text"))
+        list(missions = rd("missions"), fishstations = rd("fishstations"),
+             catchesamples = rd("catchesamples"), individuals = rd("individuals"))
+      }
+    }, error = function(e) {
+      showNotification(paste("The Biotic file could not be read:", conditionMessage(e)), type = "error", duration = 8)
+      NULL
+    })
+  })
+
+  convertedValidation <- reactive({
+    sheets <- excel_data()
+    req(sheets)
+    f <- validate_acoustic(sheets, cl$lists, biotic = bioticTables(), acocat_level = acocat_level())
+    p <- xml_path()
+    if (!is.null(p) && file.exists(p)) {
+      f <- rbind(f, validate_xml_schema(p, "acoustic"),
+                 readback_xml(p, "acoustic", list(distance = nrow(sheets$distances), sa = nrow(sheets$sa))))
+    }
+    f
+  })
+
+  uploadedValidation <- reactive({
+    req(input$aco_validate_xml)
+    p <- input$aco_validate_xml$datapath
+    withProgress(message = "Validating the uploaded XML...", value = 0.3, {
+      f_schema <- validate_xml_schema(p, "acoustic")
+      sheets <- tryCatch(acoustic_sheets_from_xml(p), error = function(e) e)
+      if (inherits(sheets, "error")) {
+        fc <- findings_collector()
+        fc$add("error", "read-back", "READBACK_FAILED", "file",
+               paste("StoX's reader could not read the file:", conditionMessage(sheets)))
+        return(rbind(fc$get(), f_schema))
+      }
+      rbind(validate_acoustic(sheets, cl$lists, biotic = bioticTables(), acocat_level = acocat_level()), f_schema)
+    })
+  })
+
+  shownValidation <- reactiveVal(NULL)
+  observeEvent(convertedValidation(), shownValidation(list(
+    what = if (is.null(xml_path())) "the Acoustic_LPA sheets (build the XML to add the schema check)" else "the Acoustic_LPA sheets and built XML",
+    f = convertedValidation())))
+  observeEvent(uploadedValidation(), shownValidation(list(
+    what = paste("the uploaded file", input$aco_validate_xml$name), f = uploadedValidation())))
+
+  output$aco_validation_summary <- renderUI({
+    v <- shownValidation()
+    if (is.null(v)) return(p(class = "text-muted small", "Load an Acoustic_LPA workbook, or an existing Acoustic XML, to validate it."))
+    tagList(
+      p(class = "small mb-1", "Results for ", strong(v$what), ":"),
+      findings_badges(v$f),
+      if (is.null(bioticTables())) p(class = "small text-muted",
+        "Add Biotic data in the sidebar to check that each acoustic category has trawl samples.")
+    )
+  })
+  output$aco_validation_table <- DT::renderDT({
+    v <- shownValidation()
+    req(v)
+    findings_dt(v$f)
+  })
+  output$aco_download_findings <- downloadHandler(
+    filename = function() paste0("Acoustic_validation_", Sys.Date(), ".csv"),
+    content = function(file) {
+      v <- shownValidation()
+      utils::write.csv(if (is.null(v)) data.frame() else v$f, file, row.names = FALSE)
+    }
+  )
+
+  # Errors block the export unless overridden
+  observe({
+    f <- tryCatch(convertedValidation(), error = function(e) NULL)
+    ok <- !is.null(xml_path()) && !is.null(f) && (sum(f$severity == "error") == 0 || isTRUE(input$aco_override))
+    shinyjs::toggleState("download_xml", condition = ok)
+  })
 }
 # ---------------------------------------------------------------
 # 4) Launch the application
 # ---------------------------------------------------------------
-shinyApp(ui = ui, server = server)
-NA
 shinyApp(ui = ui, server = server)
