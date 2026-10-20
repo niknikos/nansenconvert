@@ -13,6 +13,7 @@ library(dplyr)
 library(lubridate)
 library(DT)
 if (!exists("acocat_nansen", mode = "function")) source(file.path("helpers", "code_lists.R"), local = TRUE)
+if (!exists("validate_species_percent", mode = "function")) source(file.path("helpers", "validation.R"), local = TRUE)
 
 # ---------------------------------------------------------------
 # 0.a) Acoustic settings written to <frequency>/<distance>
@@ -409,6 +410,7 @@ server <- function(input, output, session) {
     s <- nasc_settings(input)
     acocat_map <- acocat_map_for(unique(df_staged$Species_name), cl$lists, s$acocat_level)
     res <- build_lpa_from_nasc_staged(df_staged, nasc_md(input), s, acocat_map = acocat_map)
+    rv$species_pct <- validate_species_percent(df_staged)
     rv$nasc_raw       <- res$nasc_raw
     rv$nasc_processed <- res$nasc_processed
     rv$lpa_sheets     <- res$lpa_sheets
@@ -558,6 +560,19 @@ server <- function(input, output, session) {
         strong("Interval length (integrator_dist) from: "), len_src, br(),
         strong("log_start from: "), if (is.null(notes$log_source)) "-" else notes$log_source
       ),
+      {
+        sp <- rv$species_pct
+        if (is.null(sp) || !nrow(sp)) {
+          p(strong("Species_percent: "), "adds up to 100 in every region.")
+        } else {
+          tagList(
+            p(strong("Species_percent: "), sum(sp$where != "..."),
+              " region(s) where the species shares do not add up to 100",
+              if (any(sp$where == "...")) " (first ones shown)", ":"),
+            tableOutput("tbl_species_pct")
+          )
+        }
+      },
       if (!is.null(notes$acocat_used) && nrow(notes$acocat_used)) {
         tagList(
           strong("Acoustic categories used:"),
@@ -575,6 +590,12 @@ server <- function(input, output, session) {
       } else NULL
     )
   })
+
+  output$tbl_species_pct <- renderTable({
+    sp <- rv$species_pct
+    req(sp, nrow(sp))
+    data.frame(Region = sp$where, Problem = sp$message, check.names = FALSE)
+  }, striped = TRUE, spacing = "xs")
 
   output$tbl_acocat_used <- renderTable({
     a <- rv$lpa_notes$acocat_used

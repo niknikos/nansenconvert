@@ -33,7 +33,10 @@ VALIDATION_THRESHOLDS <- list(
   gap_info_h           = 1
 )
 
-SCHEMA_DIR_CANDIDATES <- c("schemas", file.path("..", "schemas"))
+# The helpers are sourced with the app folder as working directory, so the
+# absolute path is fixed here; relative paths are kept as a fallback
+SCHEMA_DIR_CANDIDATES <- unique(c(normalizePath(file.path(getwd(), "schemas"), winslash = "/", mustWork = FALSE),
+                                  "schemas", file.path("..", "schemas")))
 
 # ---------------------------------------------------------------------------
 # Findings
