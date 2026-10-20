@@ -1,23 +1,94 @@
-# app.R
-# 🚀 Chargement des packages
+# app.R - Biotic_LPA.xlsx -> NMDBiotic v3.1 XML
+# 🚀 Packages
 library(shiny)
-library(bslib)       # Pour personnalisation des couleurs
+library(bslib)       # Theme colours
 library(readxl)
 library(xml2)
 
+# --- NMDBiotic v3.1 element order ---
+# Child elements are an xs:sequence in bioticv3_1.xsd, so they must be written
+# in this order. Columns that are not NMDBiotic elements are left out.
+BIOTIC_ELEMENT_ORDER <- list(
+  mission = c(
+    "missiontypename", "callsignal", "platformname", "cruise",
+    "missionstartdate", "missionstopdate", "purpose"
+  ),
+  fishstation = c(
+    "nation", "catchplatform", "station", "fixedstation", "stationstartdate",
+    "stationstarttime", "stationstopdate", "stationstoptime", "stationtype",
+    "latitudestart", "longitudestart", "latitudeend", "longitudeend", "system",
+    "area", "location", "bottomdepthstart", "bottomdepthstop", "bottomdepthmean",
+    "fishingdepthstart", "fishingdepthstop", "fishingdepthcount", "fishingdepthmax",
+    "fishingdepthmin", "fishingdepthmean", "fishingdepthtemperature", "gearno",
+    "sweeplength", "gear", "gearcount", "direction", "gearflow", "vesselspeed",
+    "logstart", "logstop", "distance", "gearcondition", "samplequality",
+    "verticaltrawlopening", "verticaltrawlopeningsd", "trawldoortype",
+    "trawldoorarea", "trawldoorweight", "trawldoorspread", "trawldoorspreadsd",
+    "wingspread", "wingspreadsd", "wirelength", "wirediameter", "wiredensity",
+    "soaktime", "fishingbait", "tripno", "fishabundance", "fishdistribution",
+    "landingsite", "fishingground", "vesselcount", "dataquality", "haulvalidity",
+    "flora", "vegetationcover", "visibility", "waterlevel", "winddirection",
+    "windspeed", "clouds", "sea", "weather", "stationcomment"
+  ),
+  catchsample = c(
+    "commonname", "catchcategory", "catchpartnumber", "aphia", "scientificname",
+    "identification", "foreignobject", "sampletype", "group", "conservation",
+    "catchproducttype", "raisingfactor", "catchweight", "catchvolume", "catchcount",
+    "abundancecategory", "sampleproducttype", "lengthmeasurement",
+    "lengthsampleweight", "lengthsamplevolume", "lengthsamplecount",
+    "specimensamplecount", "agesamplecount", "agingstructure", "parasite",
+    "stomach", "intestine", "tissuesample", "samplerecipient", "catchcomment"
+  ),
+  individual = c(
+    "individualproducttype", "individualweight", "individualvolume",
+    "lengthresolution", "length", "fat", "fatpercent", "sex", "maturationstage",
+    "specialstage", "eggstage", "moultingstage", "spawningfrequency",
+    "stomachfillfield", "stomachfilllab", "digestion", "liver", "liverparasite",
+    "gillworms", "swollengills", "fungusheart", "fungusspores", "fungusouter",
+    "blackspot", "vertebraecount", "gonadweight", "liverweight", "stomachweight",
+    "diameter", "mantlelength", "carapacelength", "headlength", "snouttoendoftail",
+    "snouttoendsqueezed", "snouttoanalfin", "snouttodorsalfin", "forklength",
+    "snouttoboneknob", "lengthwithouthead", "carapacewidth", "rightclawwidth",
+    "rightclawlength", "rightclawheight", "meroswidth", "meroslength",
+    "japanesecut", "abdomenwidth", "tissuesamplenumber", "morphologytype",
+    "individualcomment", "preferredagereading"
+  )
+)
+# Key columns written as attributes or used to link the levels
+BIOTIC_KEY_COLUMNS <- c(
+  "missiontype", "startyear", "platform", "missionnumber",
+  "serialnumber", "catchsampleid", "specimenid"
+)
+
+# Adds the non-empty values of one row as child elements, in schema order
+add_biotic_children <- function(node, row, level) {
+  for (col in BIOTIC_ELEMENT_ORDER[[level]]) {
+    if (!col %in% names(row)) next
+    val <- row[[col]]
+    if (!is.na(val) && nzchar(val) && !val %in% c("NA", "Inf", "-Inf", "NaN")) {
+      xml_add_child(node, col, val)
+    }
+  }
+}
+
+# Columns of a sheet that have no NMDBiotic element at that level
+biotic_unknown_columns <- function(df, level) {
+  setdiff(names(df), c(BIOTIC_ELEMENT_ORDER[[level]], BIOTIC_KEY_COLUMNS))
+}
+
 # --- Interface utilisateur ---
 ui <- fluidPage(
-  # Thème personnalisé avec bslib : couleurs primaires et secondaires
+  # bslib theme: primary and secondary colours
   theme = bs_theme(
     version   = 4,
-    bootswatch = "flatly",    # Base esthétique agréable
-    primary    = "#1E6091",   # Bleu océan profond
-    secondary  = "#2E86AB",   # Bleu marine clair
-    success    = "#28a745",   # Vert
-    danger     = "#dc3545"    # Rouge
+    bootswatch = "flatly",    # Base theme
+    primary    = "#1E6091",   # Deep ocean blue
+    secondary  = "#2E86AB",   # Light navy blue
+    success    = "#28a745",   # Green
+    danger     = "#dc3545"    # Red
   ),
 
-  # Police Google + CSS personnalisé
+  # Google fonts + custom CSS
   tags$head(
     tags$link(
       rel  = "stylesheet",
@@ -35,7 +106,7 @@ ui <- fluidPage(
       }
       h1, h2, h3, h4, h5 { font-family: 'Poppins', sans-serif !important; }
 
-      /* --- En-tête --- */
+      /* --- Header --- */
       .app-header {
         background: linear-gradient(135deg, #1E6091 0%, #2E86AB 60%, #4BA3C7 100%);
         color: #ffffff;
@@ -68,7 +139,7 @@ ui <- fluidPage(
         font-weight: 400;
       }
 
-      /* --- Cartes --- */
+      /* --- Cards --- */
       .card-custom {
         background: #ffffff;
         border-radius: 14px;
@@ -91,7 +162,7 @@ ui <- fluidPage(
         color: #2E86AB;
       }
 
-      /* --- Badge info --- */
+      /* --- Info badge --- */
       .info-badge {
         display: inline-flex;
         align-items: center;
@@ -116,7 +187,7 @@ ui <- fluidPage(
       }
       .btn-file:hover { background: #174e75 !important; }
 
-      /* --- Bouton de téléchargement --- */
+      /* --- Download button --- */
       #downloadXML {
         background: linear-gradient(135deg, #1E6091 0%, #2E86AB 100%) !important;
         border: none !important;
@@ -134,7 +205,7 @@ ui <- fluidPage(
         background: linear-gradient(135deg, #174e75 0%, #236d8c 100%) !important;
       }
 
-      /* --- Étapes --- */
+      /* --- Steps --- */
       .steps-box {
         background: #f8fafc;
         border-left: 3px solid #2E86AB;
@@ -163,7 +234,7 @@ ui <- fluidPage(
         font-weight: 700;
       }
 
-      /* --- Aperçu XML --- */
+      /* --- XML preview --- */
       .xml-preview-wrapper {
         background: #1e293b;
         border-radius: 10px;
@@ -184,14 +255,14 @@ ui <- fluidPage(
         margin: 0 !important;
       }
 
-      /* --- Barre de séparation --- */
+      /* --- Separator --- */
       hr {
         border: none;
         border-top: 1px dashed #cbd5e1;
         margin: 16px 0;
       }
 
-      /* --- Pied de page --- */
+      /* --- Footer --- */
       .app-footer {
         text-align: center;
         color: #64748b;
@@ -201,26 +272,26 @@ ui <- fluidPage(
       }
       .app-footer i { color: #1E6091; margin-right: 4px; }
 
-      /* Sidebar/Main : enlever l'encadré par défaut */
+      /* Sidebar/Main: remove the default frame */
       .well { background: transparent !important; border: none !important; box-shadow: none !important; padding: 0 !important; }
     "))
   ),
 
-  # --- En-tête ---
+  # --- Header ---
   div(class = "container",
       div(class = "app-header",
           tags$h1(
             tags$i(class = "fas fa-exchange-alt", style = "margin-right:10px;"),
-            "Convertisseur Biotic_xls_ To_ Biotic_XML"
+            "Biotic.xls → Biotic.xml converter"
           ),
           div(class = "subtitle",
               tags$i(class = "fas fa-info-circle"),
-              " Transformation de fichiers Excel LPA vers le format XML NMDBiotic (StoX)"
+              " Converts LPA Excel files to the NMDBiotic XML format (StoX)"
           )
       )
   ),
 
-  # --- Contenu principal ---
+  # --- Main content ---
   div(class = "container",
       sidebarLayout(
         sidebarPanel(
@@ -228,12 +299,12 @@ ui <- fluidPage(
           div(class = "card-custom",
               div(class = "card-title",
                   tags$i(class = "fas fa-cog"),
-                  span("Paramètres")
+                  span("Settings")
               ),
 
               div(class = "info-badge",
                   tags$i(class = "fas fa-lightbulb"),
-                  span("Fichier .xlsx (4 feuilles attendues)")
+                  span(".xlsx file (4 sheets expected)")
               ),
 
               fileInput(
@@ -244,7 +315,7 @@ ui <- fluidPage(
                 ),
                 accept      = c(".xlsx"),
                 buttonLabel = "Browse…",
-                placeholder = "Aucun fichier"
+                placeholder = "No file"
               ),
 
               tags$hr(),
@@ -253,7 +324,7 @@ ui <- fluidPage(
                 outputId = "downloadXML",
                 label    = tagList(
                   tags$i(class = "fas fa-download", style = "margin-right:6px;"),
-                  "Télécharger le XML"
+                  "Download the XML"
                 ),
                 class    = "btn-primary"
               ),
@@ -262,10 +333,10 @@ ui <- fluidPage(
 
               div(class = "steps-box",
                   tags$div(style = "font-weight:600; color:#1E6091; margin-bottom:6px;",
-                           tags$i(class = "fas fa-list-ol"), " Étapes"),
-                  div(class = "step", span(class = "step-number", "1"), "Choisir le fichier Excel"),
-                  div(class = "step", span(class = "step-number", "2"), "Attendre la génération du XML"),
-                  div(class = "step", span(class = "step-number", "3"), "Télécharger le fichier Biotic_LPA.xml")
+                           tags$i(class = "fas fa-list-ol"), " Steps"),
+                  div(class = "step", span(class = "step-number", "1"), "Choose the Excel file"),
+                  div(class = "step", span(class = "step-number", "2"), "Wait for the XML to be generated"),
+                  div(class = "step", span(class = "step-number", "3"), "Download Biotic_LPA.xml")
               )
           )
         ),
@@ -275,7 +346,7 @@ ui <- fluidPage(
           div(class = "card-custom",
               div(class = "card-title",
                   tags$i(class = "fas fa-code"),
-                  span("Aperçu du XML généré")
+                  span("Generated XML preview")
               ),
               div(class = "xml-preview-wrapper",
                   verbatimTextOutput("xmlPreview")
@@ -285,24 +356,24 @@ ui <- fluidPage(
       )
   ),
 
-  # --- Pied de page ---
+  # --- Footer ---
   div(class = "container",
       div(class = "app-footer",
           tags$i(class = "fas fa-fish"),
           "NMDBiotic v3.1 • ",
           tags$i(class = "fas fa-code-branch"),
-          "Convertisseur LPA"
+          "LPA converter"
       )
   )
 )
 
-# --- Logique serveur ---  (INCHANGÉE sauf le nom du fichier téléchargé)
+# --- Server logic ---
 server <- function(input, output, session) {
 
-  # 1. Lecture des 4 feuilles avec barre de progression
+  # 1. Read the 4 sheets, with a progress bar
   excelData <- reactive({
     req(input$excelFile)
-    withProgress(message = "Lecture du fichier Excel...", value = 0.2, {
+    withProgress(message = "Reading the Excel file...", value = 0.2, {
       missions      <- read_excel(input$excelFile$datapath, sheet = "missions", col_types = "text")
       fishstations  <- read_excel(input$excelFile$datapath, sheet = "fishstations", col_types = "text")
       catchesamples <- read_excel(input$excelFile$datapath, sheet = "catchesamples", col_types = "text")
@@ -317,14 +388,16 @@ server <- function(input, output, session) {
     )
   })
 
-  # 2. Construction de l'objet XML avec progression
+  # 2. Build the XML document, with progress
   xmlDoc <- reactive({
     req(excelData())
     df <- excelData()
-    withProgress(message = "Génération du XML...", value = 0, {
-      incProgress(0.1, detail = "Création racine et mission")
+    withProgress(message = "Generating the XML...", value = 0, {
+      incProgress(0.1, detail = "Root and mission")
       ns_uri <- "http://www.imr.no/formats/nmdbiotic/v3.1"
-      doc <- xml_new_root("missions", ns = ns_uri)
+      # xmlns declares the default namespace; a plain "ns" attribute would leave
+      # the document without one and StoX would not recognise it as NMDBiotic.
+      doc <- xml_new_root("missions", xmlns = ns_uri)
 
       # <mission>
       m <- df$missions[1, ]
@@ -335,40 +408,55 @@ server <- function(input, output, session) {
         platform      = m$platform,
         missionnumber = m$missionnumber
       ))
-      for(col in c(
-        "missiontypename","callsignal","platformname",
-        "cruise","missionstartdate","missionstopdate","purpose"
-      )) {
-        xml_add_child(missionNode, col, m[[col]])
-      }
-      incProgress(0.2, detail = "Ajout des stations")
+      add_biotic_children(missionNode, m, "mission")
+      incProgress(0.2, detail = "Adding stations")
 
-      # Stations de pêche
+      skipped <- c(
+        biotic_unknown_columns(df$missions, "mission"),
+        biotic_unknown_columns(df$fishstations, "fishstation"),
+        biotic_unknown_columns(df$catchesamples, "catchsample"),
+        biotic_unknown_columns(df$individuals, "individual")
+      )
+      if (length(skipped)) {
+        showNotification(
+          paste("Columns that are not NMDBiotic elements were left out of the XML:",
+                paste(unique(skipped), collapse = ", ")),
+          type = "warning", duration = 10
+        )
+      }
+      missing_val <- function(x) is.na(x) | !nzchar(x) | x == "NA"
+      n_no_aphia <- if ("aphia" %in% names(df$catchesamples)) {
+        sum(missing_val(df$catchesamples$aphia))
+      } else {
+        nrow(df$catchesamples)
+      }
+      if (n_no_aphia > 0) {
+        showNotification(
+          paste0(n_no_aphia, " catch sample(s) have no aphia code, which NMDBiotic requires. ",
+                 "Match their species to WoRMS in Catchsamples_LPA."),
+          type = "warning", duration = 12
+        )
+      }
+      n_no_specimen <- 0L
+
+      # Fishing stations
       n_fs <- nrow(df$fishstations)
       for(i in seq_len(n_fs)){
-        incProgress(0.5/n_fs, detail = paste("Station", i, "sur", n_fs))
+        incProgress(0.5/n_fs, detail = paste("Station", i, "of", n_fs))
         fs <- df$fishstations[i, ]
         fsNode <- xml_add_child(missionNode, "fishstation")
         xml_set_attr(fsNode, "serialnumber", fs$serialnumber)
-        for(col in setdiff(names(fs), "serialnumber")){
-          val <- fs[[col]]
-          if(!is.na(val) && nzchar(val)) xml_add_child(fsNode, col, val)
-        }
+        add_biotic_children(fsNode, fs, "fishstation")
 
-        # Échantillons de capture
+        # Catch samples
         cs_df <- subset(df$catchesamples, serialnumber == fs$serialnumber)
         for(j in seq_len(nrow(cs_df))) {
           cs <- cs_df[j, ]
           csNode <- xml_add_child(fsNode, "catchsample")
           xml_set_attr(csNode, "catchsampleid", cs$catchsampleid)
-          for(col in setdiff(
-            names(cs), c("catchsampleid","missionnumber","serialnumber")
-          )) {
-            val <- cs[[col]]
-            if(!is.na(val) && nzchar(val)) xml_add_child(csNode, col, val)
-          }
+          add_biotic_children(csNode, cs, "catchsample")
 
-          # Individus
+          # Individuals
           ind_df <- subset(
             df$individuals,
             serialnumber  == fs$serialnumber &
@@ -376,29 +464,35 @@ server <- function(input, output, session) {
           )
           for(k in seq_len(nrow(ind_df))) {
             ind <- ind_df[k, ]
+            # specimenid is a required integer attribute
+            if (missing_val(ind$specimenid)) {
+              n_no_specimen <- n_no_specimen + 1L
+              next
+            }
             indNode <- xml_add_child(csNode, "individual")
             xml_set_attr(indNode, "specimenid", ind$specimenid)
-            for(col in setdiff(
-              names(ind), c("specimenid","missionnumber","serialnumber","catchsampleid")
-            )) {
-              val <- ind[[col]]
-              if(!is.na(val) && nzchar(val)) xml_add_child(indNode, col, val)
-            }
+            add_biotic_children(indNode, ind, "individual")
           }
         }
       }
-      incProgress(1, detail = "Terminé !")
+      if (n_no_specimen > 0) {
+        showNotification(
+          paste0(n_no_specimen, " individual(s) without a specimenid were left out of the XML."),
+          type = "warning", duration = 12
+        )
+      }
+      incProgress(1, detail = "Done!")
       doc
     })
   })
 
-  # 3. Aperçu du XML
+  # 3. XML preview
   output$xmlPreview <- renderText({
     req(xmlDoc())
     as.character(xmlDoc())
   })
 
-  # 4. Téléchargement du XML  →  fichier nommé "Biotic_LPA.xml"
+  # 4. Download the XML as "Biotic_LPA.xml"
   output$downloadXML <- downloadHandler(
     filename = function() {
       "Biotic_LPA.xml"
@@ -409,5 +503,5 @@ server <- function(input, output, session) {
   )
 }
 
-# Lancer l'application
+# Launch the application
 shinyApp(ui, server)

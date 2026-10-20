@@ -1,7 +1,7 @@
-# app.R — Application Shiny unifiée pour Fishstations_LPA, Catchsamples_LPA, Individuals_LPA, Biotic_LPA
-# Toutes les logiques de scripts sont isolées dans des modules sans modification
+# app.R — Combined Shiny application for Fishstations_LPA, Catchsamples_LPA, Individuals_LPA, Biotic_LPA
+# Each part of the workflow is a separate Shiny module
 
-# --- 0. Gestion des packages (auto-installation si besoin) ---
+# --- 0. Packages ---
 library(shiny)
 library(readxl)
 library(readr)
@@ -11,21 +11,17 @@ library(writexl)
 library(DT)
 library(rhandsontable)
 library(stringi)
-library(shinyWidgets)
 library(shinycssloaders)
-library(shinyFiles)
 library(shinyalert)
-library(stringr)
 library(tibble)
-library(openxlsx)
 library(bslib)
 library(tools)
 library(later)
 
-# --- 0.bis Détection automatique du dossier de l'application ---
+# --- 0.bis Locate the application folder ---
 APP_DIR <- local({
   cand <- character(0)
-  # 1) Fichier sourcé via source()/runApp()
+  # 1) File sourced with source()/runApp()
   try(cand <- c(cand, dirname(normalizePath(sys.frame(1)$ofile, winslash = "/", mustWork = TRUE))), silent = TRUE)
   # 2) Rscript
   try({
@@ -33,7 +29,7 @@ APP_DIR <- local({
     m <- regmatches(args, regexpr("(?<=--file=).+", args, perl = TRUE))
     if (length(m)) cand <- c(cand, dirname(normalizePath(m, winslash = "/", mustWork = TRUE)))
   }, silent = TRUE)
-  # 3) RStudio (éditeur actif)
+  # 3) RStudio (active editor)
   try({
     if (requireNamespace("rstudioapi", quietly = TRUE) && rstudioapi::isAvailable()) {
       ctx <- rstudioapi::getSourceEditorContext()
@@ -42,12 +38,12 @@ APP_DIR <- local({
       }
     }
   }, silent = TRUE)
-  # 4) Dernier recours : répertoire de travail courant
+  # 4) Fallback: current working directory
   cand <- c(cand, normalizePath(getwd(), winslash = "/", mustWork = FALSE))
   cand[nzchar(cand)][1]
 })
 
-# Helpers WoRMS / espèces (inliné ; ancien fichier species_worms.R)
+# WoRMS / species helpers (inlined; formerly species_worms.R)
 worms_guess_data_path <- function(app_dir) {
   names_try <- c("WoRMS.xlsx", "WorMS.xlsx", "worms.xlsx", "WoRMS.csv", "WorMS.csv", "worms.csv")
   bases <- unique(c(
@@ -59,7 +55,7 @@ worms_guess_data_path <- function(app_dir) {
   candidates[file.exists(candidates)][1]
 }
 
-#' Charge le référentiel WoRMS; retourne NULL si introuvable / erreur
+#' Loads the WoRMS reference list; returns NULL if it is missing or unreadable
 worms_read_reference <- function(app_dir) {
   path <- worms_guess_data_path(app_dir)
   if (is.na(path) || !nzchar(path)) {
@@ -106,7 +102,7 @@ norm_col_slug <- function(x) {
     gsub("^_|_$", "", .)
 }
 
-#' Variantes reconnues pour la colonne espèce (slug normalisé)
+#' Accepted variants for the species column (normalised slug)
 is_species_slug <- function(slug) {
   patts <- c(
     "^espece$", "^especes$", "^espec$", "^esp$", "^espe$",
@@ -140,7 +136,7 @@ find_species_column_name <- function(df) {
   hit[1L]
 }
 
-#' Format binomial: genre (Maj), épithètes en minuscule
+#' Binomial format: genus capitalised, epithets in lower case
 norm_species_binomial <- function(x) {
   x <- trimws(as.character(x))
   x[nchar(x) == 0 | is.na(x)] <- NA_character_
@@ -267,7 +263,7 @@ match_vector_to_worms <- function(
   )
 }
 
-#' Vecteur nommé pour selectizeInput : 1re entrée = conserver, puis scientificname
+#' Named vector for selectizeInput: first entry = keep the imported name, then scientificname
 worms_select_choices <- function(scientificname_vec) {
   s <- unique(na.omit(as.character(scientificname_vec)))
   s <- s[nzchar(s, keepNA = TRUE) & !is.na(s)]
@@ -279,17 +275,17 @@ worms_select_choices <- function(scientificname_vec) {
   }
   if (!length(s)) {
     return(
-      c("(impossible : liste scientificname vide dans WoRMS)" = "")
+      c("(not possible: the WoRMS scientificname list is empty)" = "")
     )
   }
   v <- c("", s)
-  nms <- c("(conserver l'import)", s)
+  nms <- c("(keep the imported name)", s)
   stats::setNames(v, nms)
 }
 
-## --- Fiche catch (Fiche-SP) : détection de colonnes ---
+## --- Catches sheet: column detection ---
 
-#' Correspondance colonnes pour Individuals (slug ASCII, dont espèce avec variantes)
+#' Column matching for Individuals (ASCII slug, including species-name variants)
 indiv_map_by_slug <- function(file_cols, required_vec) {
   out <- setNames(rep(NA_character_, length(required_vec)), required_vec)
   if (!length(file_cols)) {
@@ -362,7 +358,7 @@ catch_match_totn <- function(slugs) {
   NA_character_
 }
 
-#' Construit un data.frame unifié pour le pipeline catch ; harmonise "espece" en interne
+#' Builds a standard data.frame for the catch pipeline; the species column becomes "espece"
 catch_build_standard_frame <- function(df) {
   nms <- names(df)
   sl <- norm_col_slug(nms)
@@ -374,16 +370,16 @@ catch_build_standard_frame <- function(df) {
   ttn <- catch_match_totn(sl)
   err <- list()
   if (is.na(sp) || !nzchar(sp)) {
-    err$species <- "Colonne espèce non détectée (attendu : espece, espèce, esp, scientificname, etc.)"
+    err$species <- "Species column not found (expected: espece, espèce, esp, scientificname, species, etc.)."
   }
   if (is.na(st) || !nzchar(st)) {
-    err$station <- "Colonne station / serial non détectée"
+    err$station <- "Station / serial number column not found."
   }
   if (is.na(ecp) || !nzchar(ecp)) {
-    err$ech <- "Colonne Ech_P (poids de l’échantillon) non détectée"
+    err$ech <- "Ech_P column (sample weight) not found."
   }
   if (is.na(ttn) || !nzchar(ttn)) {
-    err$totn <- "Colonne Tot_N (effectif) non détectée"
+    err$totn <- "Tot_N column (number caught) not found."
   }
   if (is.na(ttp) || !nzchar(ttp)) {
     ttp <- NA_character_
@@ -424,7 +420,7 @@ apply_species_map_chr <- function(values, sp_map) {
   out
 }
 
-#' Aligne le texte saisi/choisi sur l’orthographe exacte du réf. WoRMS (comme app_combine)
+#' Aligns a typed or chosen name with the exact WoRMS spelling
 formater_choix_worms_canonique <- function(nom, scientificname_vec) {
   nom_c <- trimws(as.character(nom))
   if (!nzchar(nom_c) || is.null(scientificname_vec) || !length(scientificname_vec)) {
@@ -439,7 +435,7 @@ formater_choix_worms_canonique <- function(nom, scientificname_vec) {
   sn[[idx[1L]]]
 }
 
-#' Applique les remplacements espèce (même principe que app_combine : cible les lignes par ancien libellé)
+#' Applies species replacements (rows are matched by their old name)
 apply_worms_replacements_catch <- function(
     espece,
     sp_map,
@@ -474,7 +470,7 @@ apply_worms_replacements_catch <- function(
   out
 }
 
-#' Applique normalisation binomiale + carte utilisateur (WoRMS) sur la colonne espece
+#' Applies binomial normalisation + the user's WoRMS mapping to the espece column
 indiv_apply_espece_workflow <- function(df, sp_map) {
   if (is.null(df) || !nrow(df) || !"espece" %in% names(df)) {
     return(df)
@@ -490,13 +486,13 @@ indiv_apply_espece_workflow <- function(df, sp_map) {
   df
 }
 
-#' Compte de lignes : validées, corrigées, hors référentiel
+#' Row counts: validated, corrected, not in the reference list
 #'
-#' - \code{raw_in} : texte d’import (fichier) avant normalisation
-#' - \code{final_in} : libellé retenu (après norm + mappage WoRMS)
-#' - \code{pre_map} : optionnel — chaîne juste après normalisation binomiale, avant
-#'   mappage manuel (modale). S’il diffère de \code{final_in}, c’est un remplacement
-#'   explicite (compté en « corrigé »).
+#' - \code{raw_in}: name as imported (file), before normalisation
+#' - \code{final_in}: name kept (after normalisation + WoRMS mapping)
+#' - \code{pre_map}: optional; the name right after binomial normalisation, before
+#'   the manual mapping (dialog). If it differs from \code{final_in}, it is an
+#'   explicit replacement (counted as "corrected").
 species_line_summary <- function(
     raw_in,
     final_in,
@@ -517,10 +513,10 @@ species_line_summary <- function(
     )
   }
   if (length(final_in) != n) {
-    stop("species_line_summary : longueur final_in != raw_in", call. = FALSE)
+    stop("species_line_summary: length of final_in != raw_in", call. = FALSE)
   }
   if (!is.null(pre_map) && length(pre_map) != n) {
-    stop("species_line_summary : longueur pre_map incorrecte", call. = FALSE)
+    stop("species_line_summary: wrong length of pre_map", call. = FALSE)
   }
   pre_map <- if (!is.null(pre_map) && length(pre_map) == n) {
     as.character(pre_map)
@@ -582,7 +578,33 @@ species_line_summary <- function(
   )
 }
 
-# --- 1. Thème principal ---
+#' Great-circle distance in nautical miles between two positions (decimal
+#' degrees); NA when a position is missing or out of range.
+station_dist_nmi <- function(lat1, lon1, lat2, lon2) {
+  lat1 <- suppressWarnings(as.numeric(lat1)); lon1 <- suppressWarnings(as.numeric(lon1))
+  lat2 <- suppressWarnings(as.numeric(lat2)); lon2 <- suppressWarnings(as.numeric(lon2))
+  bad <- function(la, lo) is.na(la) | is.na(lo) | abs(la) > 90 | abs(lo) > 180
+  r <- pi / 180
+  a <- sin((lat2 - lat1) * r / 2)^2 +
+    cos(lat1 * r) * cos(lat2 * r) * sin((lon2 - lon1) * r / 2)^2
+  d <- 2 * 3440.065 * asin(pmin(1, sqrt(a)))
+  d[bad(lat1, lon1) | bad(lat2, lon2)] <- NA_real_
+  d
+}
+
+#' Station values that are not in the stations file (editable in the
+#' Fishstations_LPA tab). Codes follow the NMD reference lists.
+STATION_DEFAULTS <- list(
+  nation               = "",
+  area                 = "",
+  gear                 = "3500",
+  gearcount            = 1,
+  haulvalidity         = "1",
+  trawldoorspread      = 15,
+  verticaltrawlopening = 50
+)
+
+# --- 1. Main theme ---
 theme_modern <- bs_theme(
   version = 5,
   bootswatch = "flatly",
@@ -591,7 +613,7 @@ theme_modern <- bs_theme(
   "font-size-base" = "1.05rem"
 )
 
-# --- 2. MODULE 1 : Fishstations_LPA (code strictement inchangé, encapsulé) ---
+# --- 2. MODULE 1: Fishstations_LPA ---
 mod_fishstations_ui <- function(id) {
   ns <- NS(id)
   fluidPage(
@@ -601,42 +623,52 @@ mod_fishstations_ui <- function(id) {
     fluidRow(
       column(4,
         div(class = "card-container",
-            div(tags$h5(icon("list-ol", class = "sidebar-icon"), strong("Étapes du workflow :")), style = "margin-bottom: 16px;"),
-            actionButton(ns("createMetadata"), label = tagList(icon("file-code"), "1. Créer Metadata-XML"), class = "btn btn-primary", style = "width: 100%;"),
+            div(tags$h5(icon("list-ol", class = "sidebar-icon"), strong("Workflow steps:")), style = "margin-bottom: 16px;"),
+            actionButton(ns("createMetadata"), label = tagList(icon("file-code"), "1. Create mission metadata"), class = "btn btn-primary", style = "width: 100%;"),
             br(), br(),
-            fileInput(ns("file"), tagList(icon("file-excel"), "2. Import Stations file"), accept = c(".xlsx", ".xls", ".csv"), buttonLabel = "Browse…", placeholder = "Aucun fichier sélectionné", width = "100%"),
+            fileInput(ns("file"), tagList(icon("file-excel"), "2. Import Stations file"), accept = c(".xlsx", ".xls", ".csv"), buttonLabel = "Browse…", placeholder = "No file selected", width = "100%"),
             br(),
-            actionButton(ns("injectMetadata"), label = tagList(icon("syringe"), "3. Injecter Metadata dans Stations file"), class = "btn btn-secondary", style = "width: 100%;"),
+            actionButton(ns("injectMetadata"), label = tagList(icon("syringe"), "3. Add metadata to the stations file"), class = "btn btn-secondary", style = "width: 100%;"),
             br(), br(),
-            downloadButton(ns("downloadStations"), label = tagList(icon("download"), "4. Télécharger Fishstations_LPA"), class = "btn btn-secondary", style = "width: 100%;"),
+            downloadButton(ns("downloadStations"), label = tagList(icon("download"), "4. Download Fishstations_LPA"), class = "btn btn-secondary", style = "width: 100%;"),
             br(), br(),
-            downloadButton(ns("downloadMetadataXML"), label = tagList(icon("download"), "5. Télécharger Missions_LPA"), class = "btn btn-primary", style = "width: 100%;")
+            downloadButton(ns("downloadMetadataXML"), label = tagList(icon("download"), "5. Download Missions_LPA"), class = "btn btn-primary", style = "width: 100%;"),
+            hr(),
+            tags$h5(icon("sliders"), strong("Station defaults")),
+            helpText("Applied to every station. Leave a field empty to omit it from the XML."),
+            textInput(ns("st_nation"), "nation (NMD nation code)", value = STATION_DEFAULTS$nation),
+            textInput(ns("st_area"), "area (NMD area code)", value = STATION_DEFAULTS$area),
+            textInput(ns("st_gear"), "gear (NMD gear code)", value = STATION_DEFAULTS$gear),
+            numericInput(ns("st_gearcount"), "gearcount", value = STATION_DEFAULTS$gearcount, min = 1),
+            textInput(ns("st_haulvalidity"), "haulvalidity (code)", value = STATION_DEFAULTS$haulvalidity),
+            numericInput(ns("st_trawldoorspread"), "trawldoorspread (m)", value = STATION_DEFAULTS$trawldoorspread),
+            numericInput(ns("st_verticaltrawlopening"), "verticaltrawlopening (m)", value = STATION_DEFAULTS$verticaltrawlopening)
         )
       ),
       column(8,
         div(class = "card-container",
             uiOutput(ns("fileError")),
-            div(tags$h4(icon("table"), "Aperçu des feuilles Fishstations_LPA"),
+            div(tags$h4(icon("table"), "Fishstations_LPA sheets preview"),
                 style = "margin-top: 8px; margin-bottom: 12px;"),
             tabsetPanel(
               id = ns("fs_preview_tabs"),
               tabPanel(
-                "Données complètes",
+                "All data",
                 div(style = "max-height:500px; overflow:auto;",
-                    DTOutput(ns("preview")) %>% tagAppendAttributes(style = "border-radius:6px;")
+                    div(style = "border-radius:6px;", DTOutput(ns("preview")))
                 )
               ),
               tabPanel(
                 "Fishstations",
                 div(style = "max-height:500px; overflow:auto;",
-                    DTOutput(ns("stationsPreview")) %>% tagAppendAttributes(style = "border-radius:6px;")
+                    div(style = "border-radius:6px;", DTOutput(ns("stationsPreview")))
                 )
               )
             ),
             conditionalPanel(sprintf("input['%s'] > 0", ns("createMetadata")),
                              br(),
-                             div(tags$h4(icon("table"), "Metadata XML (à remplir manuellement)"), style = "margin-bottom: 12px;"),
-                             rHandsontableOutput(ns("metadataTable")) %>% tagAppendAttributes(style = "border-radius:6px;box-shadow:0 1px 4px rgba(0,0,0,0.1);")
+                             div(tags$h4(icon("table"), "Mission metadata (fill in by hand)"), style = "margin-bottom: 12px;"),
+                             div(style = "border-radius:6px;box-shadow:0 1px 4px rgba(0,0,0,0.1);", rHandsontableOutput(ns("metadataTable")))
             )
         )
       )
@@ -651,6 +683,8 @@ mod_fishstations_server <- function(id) {
     )
     rawData <- reactiveVal(NULL)
     metadataDF <- reactiveVal(NULL)
+    st_default_chr <- function(x) if (is.null(x) || !nzchar(trimws(x))) NA_character_ else trimws(x)
+    st_default_num <- function(x) if (is.null(x) || is.na(x)) NA_real_ else x
     metadataCols <- c(
       "missiontype","startyear","platform","missionnumber",
       "missiontypename","callsignal","platformname","cruise",
@@ -669,7 +703,7 @@ mod_fishstations_server <- function(id) {
       tryCatch({
         if (ext %in% c("xlsx", "xls")) { df <- read_excel(input$file$datapath, guess_max = 10000)
         } else if (ext == "csv") { df <- read.csv(input$file$datapath, stringsAsFactors = FALSE)
-        } else { stop("Format non supporté : ", ext) }
+        } else { stop("Unsupported format: ", ext) }
         names(df) <- names(df) %>%
           stringi::stri_trans_general("Latin-ASCII") %>%
           tolower() %>%
@@ -680,7 +714,7 @@ mod_fishstations_server <- function(id) {
         rawData(df); output$fileError <- renderUI(NULL)
       }, error = function(e) {
         rawData(NULL)
-        output$fileError <- renderUI(div(class = "error-text", paste("Erreur lors de la lecture du fichier :", e$message)))
+        output$fileError <- renderUI(div(class = "error-text", paste("Error while reading the file:", e$message)))
       })
     })
     observeEvent(input$injectMetadata, {
@@ -694,7 +728,7 @@ mod_fishstations_server <- function(id) {
           stationtype   = m$missiontype
         )
       rawData(df)
-      showNotification("Metadata injecté dans la Fiche-ST", type = "message")
+      showNotification("Metadata added to the stations sheet", type = "message")
     })
     previewData <- reactive({
       df <- rawData() %>% req()
@@ -738,7 +772,7 @@ mod_fishstations_server <- function(id) {
       }
       if (length(missing_posCols) > 0) {
         showNotification(
-          paste0("Colonnes manquantes dans votre fichier et ignorées : ", paste(missing_posCols, collapse = ", ")),
+          paste0("Columns missing from your file (ignored): ", paste(missing_posCols, collapse = ", ")),
           type = "warning", duration = 10
         )
       }
@@ -774,19 +808,16 @@ mod_fishstations_server <- function(id) {
           )
         ) %>%
         mutate(
-          serialnumber        = station,
-          nation              = 58,
-          haulvalidity        = 1,
-          gear                = 3500,
-          gearcount           = 1,
-          logstart            = 100,
-          logstop             = logstart + 15,
-          distance            = 2.5,
-          area                = 58,
-          samplequality       = NA_character_,
-          gearcondition       = NA_character_,
-          trawldoorspread     = 15,
-          verticaltrawlopening = 50
+          serialnumber         = station,
+          nation               = st_default_chr(input$st_nation),
+          haulvalidity         = st_default_chr(input$st_haulvalidity),
+          gear                 = st_default_chr(input$st_gear),
+          gearcount            = st_default_num(input$st_gearcount),
+          area                 = st_default_chr(input$st_area),
+          samplequality        = NA_character_,
+          gearcondition        = NA_character_,
+          trawldoorspread      = st_default_num(input$st_trawldoorspread),
+          verticaltrawlopening = st_default_num(input$st_verticaltrawlopening)
         ) %>%
         rename(
           stationstarttime = heure_filage,
@@ -801,6 +832,11 @@ mod_fishstations_server <- function(id) {
           longitudestart   = longitude_filage,
           latitudeend      = latitude_virage,
           longitudeend     = longitude_virage
+        ) %>%
+        # Towed distance (nmi) from the start and end positions, computed before
+        # a missing position is filled in from the other end
+        mutate(
+          distance = round(station_dist_nmi(latitudestart, longitudestart, latitudeend, longitudeend), 3)
         ) %>%
         mutate(
           latitudestart  = if_else(is.na(latitudestart)  & !is.na(latitudeend),  latitudeend,  latitudestart),
@@ -818,7 +854,8 @@ mod_fishstations_server <- function(id) {
         ) %>%
         select(-tmp_start, -tmp_stop) %>%
         mutate(
-          soaktime = as.numeric(soaktime) / 100
+          # duree_chalutage is in minutes; NMDBiotic soaktime is in decimal hours
+          soaktime = round(suppressWarnings(as.numeric(soaktime)) / 60, 3)
         )
       df
     })
@@ -852,7 +889,7 @@ mod_fishstations_server <- function(id) {
   })
 }
 
-# --- 3. MODULE 2 : Catchsamples_LPA ---
+# --- 3. MODULE 2: Catchsamples_LPA ---
 mod_catchsamples_ui <- function(id) {
   ns <- NS(id)
   fluidPage(
@@ -860,23 +897,23 @@ mod_catchsamples_ui <- function(id) {
     sidebarLayout(
       sidebarPanel(width = 4,
                    div(class = "card mb-4",
-                       div(class = "card-header h5 bg-primary text-white", icon("file-import", class = "me-2"), "1. Import des fichiers"),
+                       div(class = "card-header h5 bg-primary text-white", icon("file-import", class = "me-2"), "1. Import files"),
                        div(class = "card-body",
-                           fileInput(ns("fileSP"), "Import Catches file (CSV, XLS ou XLSX)", accept = c(".csv", ".xlsx", ".xls"), buttonLabel = "Browse…")
+                           fileInput(ns("fileSP"), "Import Catches file (CSV, XLS or XLSX)", accept = c(".csv", ".xlsx", ".xls"), buttonLabel = "Browse…")
                        )
                    ),
                    div(class = "card",
-                       div(class = "card-header h5 bg-success text-white", icon("file-export", class = "me-2"), "2. Exporter les résultats"),
+                       div(class = "card-header h5 bg-success text-white", icon("file-export", class = "me-2"), "2. Export results"),
                        div(class = "card-body",
-                           downloadButton(ns("downloadData"), "📄 Télécharger la Fiche-SP Éditée", class = "btn-primary mb-2", style = "width: 100%;"),
-                           downloadButton(ns("downloadCatchsamples"), "📦 Télécharger Catchsamples_LPA", class = "btn-success", style = "width: 100%;")
+                           downloadButton(ns("downloadData"), "📄 Download the edited catches sheet", class = "btn-primary mb-2", style = "width: 100%;"),
+                           downloadButton(ns("downloadCatchsamples"), "📦 Download Catchsamples_LPA", class = "btn-success", style = "width: 100%;")
                        )
                    )
       ),
       mainPanel(width = 8,
                 uiOutput(ns("catch_sp_badge")),
                 div(class = "card",
-                    div(class = "card-header h5 bg-info text-white", icon("table", class = "me-2"), "Aperçu du fichier catchsamples _généré"),
+                    div(class = "card-header h5 bg-info text-white", icon("table", class = "me-2"), "Generated catchsamples preview"),
                     div(class = "card-body", DTOutput(ns("previewCatch")) %>% shinycssloaders::withSpinner(type = 6, color = "#3498db"))
                 )
       )
@@ -900,7 +937,7 @@ mod_catchsamples_server <- function(id) {
       }
       worms_index_canonical(w)
     })
-    # Étape 1: import → normalisation + modal WoRMS si besoin
+    # Step 1: import -> normalisation + WoRMS dialog if needed
     observeEvent(input$fileSP, {
       req(input$fileSP)
       rv_c$err_import <- NULL
@@ -920,7 +957,7 @@ mod_catchsamples_server <- function(id) {
         }
       )
       if (is.null(dfin) || !nrow(dfin)) {
-        rv_c$err_import <- "Impossible de lire le fichier (vide ou format invalide)."
+        rv_c$err_import <- "Could not read the file (empty or invalid format)."
         return()
       }
       st <- catch_build_standard_frame(dfin)
@@ -928,7 +965,7 @@ mod_catchsamples_server <- function(id) {
         msg <- paste(unlist(st$error), collapse = " ")
         rv_c$err_import <- msg
         showNotification(
-          paste("Import catchsamples :", msg), type = "error", duration = 10
+          paste("Catchsamples import:", msg), type = "error", duration = 10
         )
         return()
       }
@@ -940,7 +977,7 @@ mod_catchsamples_server <- function(id) {
       widx <- widx_c()
       if (is.null(wdf) || !nrow(wdf) || is.null(widx) || !nrow(widx)) {
         showNotification(
-          "Fichier WoRMS introuvable ou illisible : validation d’espèces limitée. Placez un fichier WoRMS (CSV/xlsx) dans le dossier data/.",
+          "WoRMS file missing or unreadable: species validation is limited. Put a WoRMS file (CSV/xlsx) in the data/ folder.",
           type = "warning",
           duration = 8
         )
@@ -951,15 +988,15 @@ mod_catchsamples_server <- function(id) {
       }
       showModal(
         modalDialog(
-          title = "Validation WoRMS",
+          title = "WoRMS validation",
           div(
             class = "text-center p-4",
             div(
               class = "spinner-border text-primary",
               role = "status",
-              tags$span(class = "visually-hidden", "Chargement")
+              tags$span(class = "visually-hidden", "Loading")
             ),
-            p(class = "mt-3 mb-0 small", "Vérification des noms d'espèces (WoRMS) en cours…")
+            p(class = "mt-3 mb-0 small", "Checking species names against WoRMS…")
           ),
           easyClose = FALSE, footer = NULL, size = "m"
         ),
@@ -990,17 +1027,17 @@ mod_catchsamples_server <- function(id) {
             rv_c$espece_file <- d0_l$espece_fichier
             rv_c$sp_remap <- character(0)
             showNotification(
-              "Préparation de la liste WoRMS impossible — vérifiez le référentiel dans data/.",
+              "Could not prepare the WoRMS list: check the reference file in data/.",
               type = "error", duration = 8
             )
             return()
           }
           showModal(
             modalDialog(
-              title = "Espèces non reconnues (WoRMS) — Catchsamples_LPA",
+              title = "Species not found in WoRMS — Catchsamples_LPA",
               p(
-                "Certaines espèces ne figurent pas dans le référentiel. Utilisez la zone ci-dessous : saisissez le début d’un ", tags$em("scientificname"), " WoRMS pour filtrer la liste (grosse table).",
-                " La 1re option « conserver l’import » ne joint pas l’enregistrement taxonomique.",
+                "Some species are not in the reference list. Type the start of a WoRMS ", tags$em("scientificname"), " below to filter the (long) list.",
+                " The first option, \"keep the imported name\", does not attach the taxonomic record.",
                 class = "small text-muted"
               ),
               tagList(
@@ -1010,11 +1047,11 @@ mod_catchsamples_server <- function(id) {
                     uu <- um[i]
                     selectizeInput(
                       inputId = ns(paste0("catch_worm_", i)),
-                      label = tagList(strong(htmltools::htmlEscape(uu)), " — WoRMS (scientificname) :"),
+                      label = tagList(strong(htmltools::htmlEscape(uu)), " — WoRMS (scientificname):"),
                       choices = ch_choices,
                       width = "100%",
                       options = list(
-                        placeholder = "Taper pour filtrer (ex. Sardin, Liza)…",
+                        placeholder = "Type to filter (e.g. Sardin, Liza)…",
                         maxOptions = 50000L,
                         maxItems = 1L
                       )
@@ -1023,9 +1060,9 @@ mod_catchsamples_server <- function(id) {
                 )
               ),
               footer = tagList(
-                actionButton(ns("catch_worms_apply"), "Appliquer les remplacements", class = "btn btn-primary"),
+                actionButton(ns("catch_worms_apply"), "Apply replacements", class = "btn btn-primary"),
                 actionButton(
-                  ns("catch_worms_skip"), "Continuer sans correction (tout)", class = "btn btn-outline-secondary"
+                  ns("catch_worms_skip"), "Continue without corrections (all)", class = "btn btn-outline-secondary"
                 )
               ),
               size = "l",
@@ -1075,7 +1112,7 @@ mod_catchsamples_server <- function(id) {
       m2 <- match_vector_to_worms(d0$espece, widx, scientificname_full = snf)
       n_ <- sum(m2$matched, na.rm = TRUE)
       showNotification(
-        paste("WoRMS :", n_, "/", nrow(d0), "ligne(s) avec un nom d’espèce reconnu."),
+        paste("WoRMS:", n_, "/", nrow(d0), "row(s) with a recognised species name."),
         type = "message",
         duration = 3
       )
@@ -1105,11 +1142,13 @@ mod_catchsamples_server <- function(id) {
       wselect <- tibble::as_tibble(d) %>%
         rename(
           scientificname = espece,
-          catchweight    = ech_p,
           catchcount     = tot_n
         ) %>%
         dplyr::mutate(
-          catchweight = dplyr::if_else(is.na(catchweight), tot_p, catchweight)
+          # NMDBiotic catchweight is the weight of the whole catch the sample
+          # represents (Tot_P, matching catchcount = Tot_N); Ech_P is only the
+          # weighed subsample.
+          catchweight = dplyr::if_else(is.na(tot_p), ech_p, tot_p)
         ) %>%
         dplyr::arrange(serialnumber) %>%
         dplyr::group_by(serialnumber) %>%
@@ -1158,7 +1197,7 @@ mod_catchsamples_server <- function(id) {
         mutate(
           agingstructure = NA,
           catchcomment   = NA,
-          raisingfactor  = as.numeric(tot_p) / as.numeric(catchweight)
+          raisingfactor  = as.numeric(tot_p) / as.numeric(ech_p)
         ) %>%
         select(
           scientificname, commonname, serialnumber, catchsampleid,
@@ -1185,7 +1224,7 @@ mod_catchsamples_server <- function(id) {
         return(
           p(
             class = "text-muted small mb-2",
-            "Aucun fichier Fiche‑SP chargé, ou en attente de validation."
+            "No catches sheet loaded yet, or waiting for validation."
           )
         )
       }
@@ -1194,7 +1233,7 @@ mod_catchsamples_server <- function(id) {
         return(
           div(
             class = "d-flex flex-wrap align-items-center gap-3 small mb-2 p-2 rounded border text-muted",
-            "Référentiel WoRMS non chargé : indicateur de statut d’espèces indisponible (placez le fichier dans data/ )."
+            "WoRMS reference not loaded: species status is unavailable (put the file in data/)."
           )
         )
       }
@@ -1217,16 +1256,16 @@ mod_catchsamples_server <- function(id) {
       unres_lbl <- if (sumx$n_unresolved <= 0L) {
         "0"
       } else if (nsp < sumx$n_unresolved) {
-        paste0(nsp, " espèce(s) · ", sumx$n_unresolved, " ligne(s)")
+        paste0(nsp, " species · ", sumx$n_unresolved, " row(s)")
       } else {
         as.character(sumx$n_unresolved)
       }
       div(
         class = "d-flex flex-wrap align-items-center gap-3 small mb-2 p-2 rounded border",
         style = "background: #fff;",
-        tags$span(HTML("&#9989;"), " Validées (réf. WoRMS, sans reformatage) : ", sumx$n_validated),
-        tags$span(HTML("&#9888;"), " Corrigées / reformatées (modale) : ", sumx$n_corrected),
-        tags$span(HTML("&#10060;"), " Non reconnues (réf. WoRMS) : ", unres_lbl)
+        tags$span(HTML("&#9989;"), " Validated (in WoRMS, unchanged): ", sumx$n_validated),
+        tags$span(HTML("&#9888;"), " Corrected / reformatted (dialog): ", sumx$n_corrected),
+        tags$span(HTML("&#10060;"), " Not found in WoRMS: ", unres_lbl)
       )
     })
     output$previewCatch <- renderDT(
@@ -1234,10 +1273,10 @@ mod_catchsamples_server <- function(id) {
         csd <- tryCatch(catchSamplesData(), error = function(e) NULL)
         if (is.null(csd) || (is.data.frame(csd) && !nrow(csd))) {
           if (!is.null(rv_c$err_import)) {
-            return(data.frame(Info = "Correction des erreurs d’import ci-dessus."))
+            return(data.frame(Info = "Fix the import errors shown above."))
           }
           return(
-            data.frame(Info = "Importez une Fiche‑SP, puis appliquiez le référentiel WoRMS si proposé.")
+            data.frame(Info = "Import a catches sheet, then apply the WoRMS corrections if offered.")
           )
         }
         csd
@@ -1245,11 +1284,11 @@ mod_catchsamples_server <- function(id) {
       options = list(pageLength = 10, scrollX = TRUE)
     )
     output$downloadData <- downloadHandler(
-      filename = function() { paste0("Fiche-SP_transforme_", Sys.Date(), ".xlsx") },
+      filename = function() { paste0("Catches_sheet_edited_", Sys.Date(), ".xlsx") },
       content = function(file) {
         dat <- tryCatch(transformedData(), error = function(e) NULL)
         if (is.null(dat) || (is.data.frame(dat) && !nrow(dat))) {
-          stop("Aucune donnée à exporter.")
+          stop("No data to export.")
         }
         writexl::write_xlsx(dat, path = file)
       }
@@ -1259,7 +1298,7 @@ mod_catchsamples_server <- function(id) {
       content = function(file) {
         csd <- tryCatch(catchSamplesData(), error = function(e) NULL)
         if (is.null(csd) || !nrow(csd)) {
-          stop("Aucune donnée prête. Importez d’abord un fichier Fiche‑SP valide.")
+          stop("No data ready. Import a valid catches sheet first.")
         }
         writexl::write_xlsx(csd, path = file)
       }
@@ -1267,7 +1306,7 @@ mod_catchsamples_server <- function(id) {
   })
 }
 
-# --- 4. MODULE 3 : Individuals_LPA (contenu remplacé par app-individuals) ---
+# --- 4. MODULE 3: Individuals_LPA ---
 INDIV_FQ_REQUIRED <- c("station", "nombre", "poids_mens", "espece", "taille_cm")
 INDIV_FQ_LABELS <- c(
   station    = "station",
@@ -1347,14 +1386,14 @@ mod_individuals_ui <- function(id) {
       title = div(
         class = "d-flex align-items-center gap-2",
         icon("fish"),
-        span("Individuals LPA — Import, jointure et export", class = "fw-semibold")
+        span("Individuals LPA — import, join and export", class = "fw-semibold")
       )
     ),
     layout_sidebar(
       sidebar = sidebar(
         width = 340,
         class = "indiv-lpa-sidebar",
-        h5("Fichiers Excel"),
+        h5("Excel files"),
         uiOutput(ns("indiv_worms_badge")),
         fileInput(ns("fq_file"),  "Import Length frequency file (.xlsx / .xls)", accept = c(".xlsx", ".xls"), buttonLabel = "Browse…"),
         fileInput(ns("bio_file"), "Import Biology file (.xlsx / .xls)",           accept = c(".xlsx", ".xls"), buttonLabel = "Browse…"),
@@ -1365,18 +1404,18 @@ mod_individuals_ui <- function(id) {
            .indiv-actions .btn { margin:0 !important; }"
         )),
         div(class = "indiv-actions",
-          actionButton(ns("btn_join"), "Joint Biology with Length", class = "btn-primary w-100", icon = icon("link")),
+          actionButton(ns("btn_join"), "Join Biology with Length", class = "btn-primary w-100", icon = icon("link")),
           downloadButton(ns("dl_individuals"), "Export Individuals_LPA.xlsx", class = "btn-success w-100")
         ),
         hr(style = "margin:.5rem 0;"),
         helpText(
-          "Fusion : même station, même espece, et colonne nombre (Fq) avec colonne nombre (Biologie).",
-          "Valeurs numériques ; si plusieurs lignes ont la même valeur k, 1re avec 1re, 2e avec 2e, etc."
+          "Join: same station, same species (espece), and the nombre column of the length-frequency file with the nombre column of the biology file.",
+          "Numeric values; when several rows share the same value k, the 1st is paired with the 1st, the 2nd with the 2nd, and so on."
         ),
-        helpText("Export : transformations appliquées sur les lignes jointes (voir aperçu ci-dessous).")
+        helpText("Export: the transformations are applied to the joined rows (see the preview).")
       ),
       div(
-        h4(icon("table"), "Aperçu des feuilles Individuals_LPA"),
+        h4(icon("table"), "Individuals_LPA sheets preview"),
         tabsetPanel(
           id = ns("indiv_preview_tabs"),
           tabPanel(
@@ -1404,12 +1443,12 @@ mod_individuals_ui <- function(id) {
           ),
           tabPanel(
             "Export Individuals_LPA.xlsx",
-            p("Aperçu des colonnes exportées (10 premières lignes) :", class = "text-muted small"),
+            p("Preview of the exported columns (first 10 rows):", class = "text-muted small"),
             div(class = "table-responsive",
                 style = "max-height:500px; overflow:auto;",
                 tableOutput(ns("preview_export"))),
             hr(),
-            h6("Ordre des colonnes dans le fichier"),
+            h6("Column order in the file"),
             tags$pre(class = "bg-light p-2 rounded small", paste(INDIV_EXPORT_COL_ORDER, collapse = ", "))
           )
         )
@@ -1475,17 +1514,17 @@ mod_individuals_server <- function(id) {
     output$fq_map_ui <- renderUI({
       req(rv$fq_raw, rv$fq_map)
       if (!is.null(rv$fq_err)) {
-        return(div(class = "text-danger small", paste("Erreur :", rv$fq_err)))
+        return(div(class = "text-danger small", paste("Error:", rv$fq_err)))
       }
       need <- indiv_required_fields_missing_map(rv$fq_map, INDIV_FQ_REQUIRED)
       if (length(need) == 0) {
         return(div(class = "text-success small mb-2", icon("check-circle"),
-                   " Toutes les colonnes Fq_taille sont reconnues automatiquement."))
+                   " All length-frequency columns were recognised automatically."))
       }
       cn <- unique(names(rv$fq_raw))
-      cols <- c("(aucune)" = "", stats::setNames(cn, cn))
+      cols <- c("(none)" = "", stats::setNames(cn, cn))
       tagList(
-        h6("Correspondance manuelle — Fq_taille (colonnes non détectées)"),
+        h6("Manual matching — length-frequency (columns not detected)"),
         lapply(need, function(req_) {
           lbl <- names(INDIV_FQ_LABELS)[INDIV_FQ_LABELS == req_]
           if (!length(lbl)) lbl <- req_
@@ -1515,17 +1554,17 @@ mod_individuals_server <- function(id) {
     output$bio_map_ui <- renderUI({
       req(rv$bio_raw, rv$bio_map)
       if (!is.null(rv$bio_err)) {
-        return(div(class = "text-danger small", paste("Erreur :", rv$bio_err)))
+        return(div(class = "text-danger small", paste("Error:", rv$bio_err)))
       }
       need <- indiv_required_fields_missing_map(rv$bio_map, INDIV_BIO_REQUIRED)
       if (length(need) == 0) {
         return(div(class = "text-success small mb-2", icon("check-circle"),
-                   " Toutes les colonnes Biologie sont reconnues automatiquement."))
+                   " All biology columns were recognised automatically."))
       }
       cn <- unique(names(rv$bio_raw))
-      cols <- c("(aucune)" = "", stats::setNames(cn, cn))
+      cols <- c("(none)" = "", stats::setNames(cn, cn))
       tagList(
-        h6("Correspondance manuelle — Biologie (colonnes non détectées)"),
+        h6("Manual matching — biology (columns not detected)"),
         lapply(need, function(req_) {
           lbl <- names(INDIV_BIO_LABELS)[INDIV_BIO_LABELS == req_]
           if (!length(lbl)) lbl <- req_
@@ -1572,7 +1611,7 @@ mod_individuals_server <- function(id) {
       indiv_standardize_df(rv$bio_raw, INDIV_BIO_REQUIRED, m)
     })
 
-    # Empreintes séparées : validation WoRMS indépendante pour chaque fichier (avant jointure).
+    # Separate fingerprints: each file is checked against WoRMS on its own (before the join).
     indiv_worms_fp_fq <- shiny::reactive({
       if (is.null(rv$fq_raw) || is.null(rv$fq_map)) {
         return(invisible(NULL))
@@ -1623,7 +1662,7 @@ mod_individuals_server <- function(id) {
       }
       indiv_apply_espece_workflow(s$df, m)
     })
-    # WoRMS : fichier Length frequency (Fq_taille) seul, avant jointure
+    # WoRMS: length-frequency file on its own, before the join
     observe({
       fp <- indiv_worms_fp_fq()
       if (is.null(fp) || !nzchar(fp)) {
@@ -1647,7 +1686,7 @@ mod_individuals_server <- function(id) {
       }
       if (is.null(widx) || !nrow(widx)) {
         showNotification(
-          "Fichier WoRMS indisponible (dossier data/) — validation Fq ignorée pour Individuals.",
+          "WoRMS file unavailable (data/ folder): length-frequency species check skipped for Individuals.",
           type = "warning", duration = 6
         )
         rv$indiv_worms_solved_fq_fp <- fp
@@ -1656,15 +1695,15 @@ mod_individuals_server <- function(id) {
       rv$indiv_worms_awaiting <- TRUE
       showModal(
         modalDialog(
-          title = "Validation WoRMS",
+          title = "WoRMS validation",
           div(
             class = "text-center p-4",
             div(
               class = "spinner-border text-primary",
               role = "status",
-              tags$span(class = "visually-hidden", "Chargement")
+              tags$span(class = "visually-hidden", "Loading")
             ),
-            p(class = "mt-3 mb-0 small", "Vérification des noms d'espèces (WoRMS) en cours…")
+            p(class = "mt-3 mb-0 small", "Checking species names against WoRMS…")
           ),
           easyClose = FALSE, footer = NULL, size = "m"
         ),
@@ -1702,15 +1741,15 @@ mod_individuals_server <- function(id) {
             rv$indiv_worms_awaiting <- FALSE
             rv$indiv_worms_solved_fq_fp <- fp_l
             showNotification(
-              "Préparation de la liste WoRMS impossible — vérifiez le référentiel dans data/.",
+              "Could not prepare the WoRMS list: check the reference file in data/.",
               type = "error", duration = 8
             )
             return()
           }
-          w_txt <- p("Fichier Length frequency (Fq_taille) mappé. Saisissez le début d’un ", tags$em("scientificname"), " WoRMS pour filtrer. La 1re option conserve le libellé importé.", class = "small text-muted")
+          w_txt <- p("Length-frequency file mapped. Type the start of a WoRMS ", tags$em("scientificname"), " to filter. The first option keeps the imported name.", class = "small text-muted")
           showModal(
             modalDialog(
-              title = "Espèces non reconnues (WoRMS) — Fq_taille / Individuals",
+              title = "Species not found in WoRMS — length-frequency / Individuals",
               w_txt,
               tagList(
                 lapply(
@@ -1719,11 +1758,11 @@ mod_individuals_server <- function(id) {
                     uu <- um[i]
                     selectizeInput(
                       inputId = ns(paste0("indiv_worm_", i)),
-                      label = tagList(strong(htmltools::htmlEscape(uu)), " — WoRMS (scientificname) :"),
+                      label = tagList(strong(htmltools::htmlEscape(uu)), " — WoRMS (scientificname):"),
                       choices = ch_choices_i,
                       width = "100%",
                       options = list(
-                        placeholder = "Taper pour filtrer (scientificname)…",
+                        placeholder = "Type to filter (scientificname)…",
                         maxOptions = 50000L,
                         maxItems = 1L
                       )
@@ -1732,8 +1771,8 @@ mod_individuals_server <- function(id) {
                 )
               ),
               footer = tagList(
-                actionButton(ns("indiv_worms_apply"), "Appliquer", class = "btn btn-primary"),
-                actionButton(ns("indiv_worms_skip"), "Continuer sans correction", class = "btn btn-outline-secondary")
+                actionButton(ns("indiv_worms_apply"), "Apply", class = "btn btn-primary"),
+                actionButton(ns("indiv_worms_skip"), "Continue without corrections", class = "btn btn-outline-secondary")
               ),
               size = "l", easyClose = FALSE
             ),
@@ -1746,7 +1785,7 @@ mod_individuals_server <- function(id) {
         delay = 0.08
       )
     })
-    # WoRMS : fichier Biologie seul, indépendamment du Fq (avant jointure)
+    # WoRMS: biology file on its own, separately from the length-frequency file (before the join)
     observe({
       fp <- indiv_worms_fp_bio()
       if (is.null(fp) || !nzchar(fp)) {
@@ -1770,7 +1809,7 @@ mod_individuals_server <- function(id) {
       }
       if (is.null(widx) || !nrow(widx)) {
         showNotification(
-          "Fichier WoRMS indisponible (dossier data/) — validation Biologie ignorée pour Individuals.",
+          "WoRMS file unavailable (data/ folder): biology species check skipped for Individuals.",
           type = "warning", duration = 6
         )
         rv$indiv_worms_solved_bio_fp <- fp
@@ -1779,15 +1818,15 @@ mod_individuals_server <- function(id) {
       rv$indiv_worms_awaiting <- TRUE
       showModal(
         modalDialog(
-          title = "Validation WoRMS",
+          title = "WoRMS validation",
           div(
             class = "text-center p-4",
             div(
               class = "spinner-border text-primary",
               role = "status",
-              tags$span(class = "visually-hidden", "Chargement")
+              tags$span(class = "visually-hidden", "Loading")
             ),
-            p(class = "mt-3 mb-0 small", "Vérification des noms d'espèces (WoRMS) en cours…")
+            p(class = "mt-3 mb-0 small", "Checking species names against WoRMS…")
           ),
           easyClose = FALSE, footer = NULL, size = "m"
         ),
@@ -1825,15 +1864,15 @@ mod_individuals_server <- function(id) {
             rv$indiv_worms_awaiting <- FALSE
             rv$indiv_worms_solved_bio_fp <- fp_l
             showNotification(
-              "Préparation de la liste WoRMS impossible — vérifiez le référentiel dans data/.",
+              "Could not prepare the WoRMS list: check the reference file in data/.",
               type = "error", duration = 8
             )
             return()
           }
-          w_txt <- p("Fichier Biologie mappé. Saisissez le début d’un ", tags$em("scientificname"), " WoRMS pour filtrer. La 1re option conserve le libellé importé.", class = "small text-muted")
+          w_txt <- p("Biology file mapped. Type the start of a WoRMS ", tags$em("scientificname"), " to filter. The first option keeps the imported name.", class = "small text-muted")
           showModal(
             modalDialog(
-              title = "Espèces non reconnues (WoRMS) — Biologie / Individuals",
+              title = "Species not found in WoRMS — biology / Individuals",
               w_txt,
               tagList(
                 lapply(
@@ -1842,11 +1881,11 @@ mod_individuals_server <- function(id) {
                     uu <- um[i]
                     selectizeInput(
                       inputId = ns(paste0("indiv_worm_", i)),
-                      label = tagList(strong(htmltools::htmlEscape(uu)), " — WoRMS (scientificname) :"),
+                      label = tagList(strong(htmltools::htmlEscape(uu)), " — WoRMS (scientificname):"),
                       choices = ch_choices_i,
                       width = "100%",
                       options = list(
-                        placeholder = "Taper pour filtrer (scientificname)…",
+                        placeholder = "Type to filter (scientificname)…",
                         maxOptions = 50000L,
                         maxItems = 1L
                       )
@@ -1855,8 +1894,8 @@ mod_individuals_server <- function(id) {
                 )
               ),
               footer = tagList(
-                actionButton(ns("indiv_worms_apply"), "Appliquer", class = "btn btn-primary"),
-                actionButton(ns("indiv_worms_skip"), "Continuer sans correction", class = "btn btn-outline-secondary")
+                actionButton(ns("indiv_worms_apply"), "Apply", class = "btn btn-primary"),
+                actionButton(ns("indiv_worms_skip"), "Continue without corrections", class = "btn btn-outline-secondary")
               ),
               size = "l", easyClose = FALSE
             ),
@@ -1939,7 +1978,7 @@ mod_individuals_server <- function(id) {
         return(
           div(
             class = "small text-muted mb-2",
-            "WoRMS : référentiel non chargé (dossier data/)."
+            "WoRMS: reference list not loaded (data/ folder)."
           )
         )
       }
@@ -1970,40 +2009,40 @@ mod_individuals_server <- function(id) {
       unres_i <- if (sumx$n_unresolved <= 0L) {
         "0"
       } else if (nsp_i < sumx$n_unresolved) {
-        paste0(nsp_i, " espèce(s) · ", sumx$n_unresolved, " ligne(s)")
+        paste0(nsp_i, " species · ", sumx$n_unresolved, " row(s)")
       } else {
         as.character(sumx$n_unresolved)
       }
       div(
         class = "small mb-2 p-2 rounded border",
         style = "background:#f8f9fa;",
-        tags$span(HTML("&#9989;"), " Validées : ", sumx$n_validated), " · ",
-        tags$span(HTML("&#9888;"), " Corrigées : ", sumx$n_corrected), " · ",
-        tags$span(HTML("&#10060;"), " Non reconnues : ", unres_i)
+        tags$span(HTML("&#9989;"), " Validated: ", sumx$n_validated), " · ",
+        tags$span(HTML("&#9888;"), " Corrected: ", sumx$n_corrected), " · ",
+        tags$span(HTML("&#10060;"), " Not found: ", unres_i)
       )
     })
 
     output$fq_status <- renderText({
-      if (!is.null(rv$fq_err)) return(paste("Erreur lecture Fq :", rv$fq_err))
+      if (!is.null(rv$fq_err)) return(paste("Error reading the length-frequency file:", rv$fq_err))
       req(fq_std_reactive())
       s <- fq_std_reactive()
       if (length(s$missing)) {
-        paste("Colonnes obligatoires manquantes :", paste(s$missing, collapse = ", "),
-              "\nVeuillez compléter le mapping affiché ci-dessus.")
+        paste("Required columns missing:", paste(s$missing, collapse = ", "),
+              "\nPlease complete the column matching shown above.")
       } else {
-        "Fq_taille : prêt (colonnes normalisées)."
+        "Length-frequency: ready (columns normalised)."
       }
     })
 
     output$bio_status <- renderText({
-      if (!is.null(rv$bio_err)) return(paste("Erreur lecture Biologie :", rv$bio_err))
+      if (!is.null(rv$bio_err)) return(paste("Error reading the biology file:", rv$bio_err))
       req(bio_std_reactive())
       s <- bio_std_reactive()
       if (length(s$missing)) {
-        paste("Colonnes obligatoires manquantes :", paste(s$missing, collapse = ", "),
-              "\nVeuillez compléter le mapping affiché ci-dessus.")
+        paste("Required columns missing:", paste(s$missing, collapse = ", "),
+              "\nPlease complete the column matching shown above.")
       } else {
-        "Biologie : prêt (colonnes normalisées)."
+        "Biology: ready (columns normalised)."
       }
     })
 
@@ -2037,15 +2076,15 @@ mod_individuals_server <- function(id) {
       fq  <- tryCatch(fq_std_reactive(),  error = function(e) NULL)
       bio <- tryCatch(bio_std_reactive(), error = function(e) NULL)
       if (is.null(fq) || is.null(bio)) {
-        rv$join_error <- "Chargez les deux fichiers et complétez le mapping."; return()
+        rv$join_error <- "Load both files and complete the column matching."; return()
       }
       if (length(fq$missing) || length(bio$missing)) {
-        rv$join_error <- "Mapping incomplet : vérifiez les colonnes obligatoires pour les deux tableaux."; return()
+        rv$join_error <- "Column matching incomplete: check the required columns of both tables."; return()
       }
       d1 <- tryCatch(indiv_fq_worms_df(),  error = function(e) NULL)
       d2 <- tryCatch(indiv_bio_worms_df(), error = function(e) NULL)
       if (is.null(d1) || is.null(d2) || !nrow(d1) || !nrow(d2)) {
-        rv$join_error <- "Préparez Fq et Biologie (normalisation d’espèces impossible). Vérifiez les colonnes requises."
+        rv$join_error <- "Prepare the length-frequency and biology files (species normalisation failed). Check the required columns."
         return()
       }
       n_fq <- nrow(d1)
@@ -2076,25 +2115,25 @@ mod_individuals_server <- function(id) {
         ) %>%
           dplyr::select(-dplyr::any_of(c(".k_nombre", ".rn_pair")))
       }, error = function(e) {
-        rv$join_error <<- paste("Erreur fusion :", conditionMessage(e))
+        rv$join_error <<- paste("Join error:", conditionMessage(e))
         NULL
       })
       if (is.null(join_attempt)) {
         shinyalert::shinyalert(
-          title = "Erreur de jointure",
-          text  = rv$join_error %||% "Impossible d'insérer la Biologie dans Fq_taille.",
+          title = "Join error",
+          text  = rv$join_error %||% "Could not join the biology data to the length-frequency data.",
           type  = "error"
         )
         return()
       }
       if (nrow(join_attempt) != n_fq) {
         rv$join_error <- paste0(
-          "Le nombre de lignes (", nrow(join_attempt), ") ne correspond pas au fichier Fq (",
-          n_fq, "). Vérifiez les doublons (station, espece, nombre) dans Biologie."
+          "The number of rows (", nrow(join_attempt), ") does not match the length-frequency file (",
+          n_fq, "). Check for duplicates (station, espece, nombre) in the biology file."
         )
         rv$joined <- join_attempt
         shinyalert::shinyalert(
-          title = "Jointure partielle",
+          title = "Partial join",
           text  = rv$join_error,
           type  = "warning"
         )
@@ -2102,22 +2141,22 @@ mod_individuals_server <- function(id) {
       }
       rv$joined <- join_attempt
       shinyalert::shinyalert(
-        title = "Jointure réussie",
-        text  = paste0("Biologie insérée dans Fq_taille avec succès (", n_fq, " lignes)."),
+        title = "Join successful",
+        text  = paste0("Biology data joined to the length-frequency data (", n_fq, " rows)."),
         type  = "success",
         timer = 2500,
         showConfirmButton = FALSE
       )
       showNotification(
-        tagList(icon("check-circle"), " Biologie insérée dans Fq_taille (", n_fq, " lignes)."),
+        tagList(icon("check-circle"), " Biology data joined to the length-frequency data (", n_fq, " rows)."),
         type = "message", duration = 4
       )
     })
 
     output$join_status <- renderText({
       if (!is.null(rv$join_error) && nzchar(rv$join_error %||% "")) return(rv$join_error)
-      if (is.null(rv$joined)) return("Cliquez sur « Insérer Biologie dans Fq_taille » après import et mapping.")
-      paste("Lignes (identiques au fichier Fq_taille) :", nrow(rv$joined))
+      if (is.null(rv$joined)) return("Click \"Join Biology with Length\" after importing and matching both files.")
+      paste("Rows (same as the length-frequency file):", nrow(rv$joined))
     })
 
     output$preview_joined <- renderTable({
@@ -2164,7 +2203,7 @@ mod_individuals_server <- function(id) {
 
     output$preview_export <- renderTable({
       req(rv$joined)
-      validate(need(nrow(rv$joined) > 0, "Jointure vide : rien à exporter."))
+      validate(need(nrow(rv$joined) > 0, "Empty join: nothing to export."))
       head(export_df(), 10)
     }, striped = TRUE)
 
@@ -2172,7 +2211,7 @@ mod_individuals_server <- function(id) {
       filename = function() "Individuals_LPA.xlsx",
       content  = function(file) {
         if (is.null(rv$joined) || nrow(rv$joined) == 0) {
-          stop("Aucune donnée jointe à exporter. Vérifiez la jointure.")
+          stop("No joined data to export. Check the join.")
         }
         writexl::write_xlsx(list(Individuals = export_df()), path = file)
       }
@@ -2181,7 +2220,7 @@ mod_individuals_server <- function(id) {
 }
 
 
-# --- 5. MODULE 4 : Biotic_LPA ---
+# --- 5. MODULE 4: Biotic_LPA ---
 mod_biotic_ui <- function(id) {
   ns <- NS(id)
   fluidPage(
@@ -2190,14 +2229,14 @@ mod_biotic_ui <- function(id) {
       sidebarPanel(
         fileInput(ns("in_missions"), "Missions_LPA.xlsx",     accept = ".xlsx", buttonLabel = "Browse…"),
         fileInput(ns("in_fish"),     "Fishstations_LPA.xlsx",  accept = ".xlsx", buttonLabel = "Browse…"),
-        fileInput(ns("in_catch"),    "Catchesamples_LPA.xlsx", accept = ".xlsx", buttonLabel = "Browse…"),
+        fileInput(ns("in_catch"),    "Catchsamples_LPA.xlsx",  accept = ".xlsx", buttonLabel = "Browse…"),
         fileInput(ns("in_indiv"),    "Individuals_LPA.xlsx",   accept = ".xlsx", buttonLabel = "Browse…"),
-        actionButton(ns("process"), "Injecter les données", class = "btn-primary w-100 mb-2"),
-        downloadButton(ns("download_biotic"), "Télécharger Biotic_LPA", class = "btn-success w-100"),
+        actionButton(ns("process"), "Combine the data", class = "btn-primary w-100 mb-2"),
+        downloadButton(ns("download_biotic"), "Download Biotic_LPA", class = "btn-success w-100"),
         width = 3
       ),
       mainPanel(
-        h4(icon("table"), "Aperçu des fichiers Biotic_LPA (5 premières lignes à l'import)"),
+        h4(icon("table"), "Biotic_LPA input files preview (first 5 rows)"),
         tabsetPanel(
           id = ns("biotic_preview_tabs"),
           tabPanel(
@@ -2222,7 +2261,7 @@ mod_biotic_ui <- function(id) {
           )
         ),
         br(),
-        h4(icon("database"), "Aperçu des données injectées"),
+        h4(icon("database"), "Combined data preview"),
         tabsetPanel(
           id = ns("biotic_full_tabs"),
           tabPanel("Missions",       div(style = "max-height:500px; overflow:auto;", DTOutput(ns("tbl_missions")))),
@@ -2255,7 +2294,7 @@ mod_biotic_server <- function(id) {
     })
     data_in <- eventReactive(input$process, {
       req(input$in_missions, input$in_fish, input$in_catch, input$in_indiv)
-      withProgress(message="Lecture des fichiers...", value=0, {
+      withProgress(message="Reading the files...", value=0, {
         incProgress(0.25)
         missions     <- read_excel(input$in_missions$datapath)
         fishstations <- read_excel(input$in_fish$datapath)
@@ -2322,7 +2361,7 @@ mod_biotic_server <- function(id) {
           n_miss <- sum(is.na(individuals$catchsampleid))
           if (n_miss > 0) {
             showNotification(
-              paste0("Attention : ", n_miss, " ligne(s) d'Individuals sans correspondance (scientificname + serialnumber) dans Catchsamples."),
+              paste0("Warning: ", n_miss, " Individuals row(s) have no match (scientificname + serialnumber) in Catchsamples."),
               type = "warning", duration = 8
             )
           }
@@ -2333,7 +2372,7 @@ mod_biotic_server <- function(id) {
           group_by(serialnumber, catchsampleid) %>%
           summarise(
             poids = first(Poids_Mens),
-            max_specimen = max(specimenid, na.rm=TRUE),
+            max_specimen = if (all(is.na(specimenid))) NA_real_ else max(specimenid, na.rm = TRUE),
             .groups="drop"
           )
         for(col in c("sampleproducttype","lengthmeasurement","lengthsampleweight","lengthsamplecount","specimensamplecount","sampletype")){
@@ -2364,12 +2403,12 @@ mod_biotic_server <- function(id) {
       filename = function(){"Biotic_LPA.xlsx"},
       content = function(file){
         dfs <- data_in()
-        # Alignement EXACT sur Bioltic_valide_model.xlsx : toutes les colonnes
-        # sont écrites en texte (inlineStr) pour éviter les erreurs de types
-        # dans Stox (ex: specimenid / startyear integer vs character).
+        # Matches Bioltic_valide_model.xlsx exactly: every column is written
+        # as text (inlineStr) to avoid type errors in StoX
+        # (e.g. specimenid / startyear integer vs character).
         .to_chr <- function(x) {
           if (is.numeric(x)) {
-            # Évite la notation scientifique et les ".0" parasites sur entiers.
+            # Avoids scientific notation and stray ".0" on integers.
             s <- format(x, scientific = FALSE, trim = TRUE, nsmall = 0, justify = "none")
             s <- sub("\\.0+$", "", s)
           } else {
@@ -2397,11 +2436,11 @@ mod_biotic_server <- function(id) {
   })
 }
 
-# --- 6. UI principale & routing par onglets avec icônes ---
+# --- 6. Main UI: one tab per module ---
 ui <- tagList(
   tags$head(
     tags$style(
-      htmltools::HTML("/* Selectize dans les modales : menu au-dessus de la modale (bslib 5) */\n.modal .selectize-dropdown { z-index: 2005 !important; max-height: 50vh; overflow: auto; }")
+      htmltools::HTML("/* Selectize inside dialogs: show the menu above the dialog (bslib 5) */\n.modal .selectize-dropdown { z-index: 2005 !important; max-height: 50vh; overflow: auto; }")
     )
   ),
   navbarPage(

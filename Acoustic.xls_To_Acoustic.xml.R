@@ -1,29 +1,124 @@
-# app.R - Version avec couleur de barre de progression personnalisée (orange)
+# app.R - Acoustic_LPA.xlsx -> NMD Echosounder v1 XML
 
 # ---------------------------------------------------------------
-# 0) Configuration initiale
+# 0) Initial configuration
 # ---------------------------------------------------------------
 options(shiny.maxRequestSize = 500 * 1024^2)
-options(shiny.reactlog = TRUE)
 # ---------------------------------------------------------------
-# 1) Chargement des librairies
+# 1) Libraries
 # ---------------------------------------------------------------
 library(shiny)
 library(shinyjs)
 library(bslib)
-library(future)
-library(promises)
-library(furrr)
 library(readxl)
 library(xml2)
 library(dplyr)
 library(purrr)
-library(ggplot2)
-library(plotly)
 library(fontawesome)
-plan(multisession, workers = availableCores() - 1)
 # ---------------------------------------------------------------
-# 2) Interface Utilisateur Modernisée
+# 1.b) Building the NMD Echosounder v1 XML
+# ---------------------------------------------------------------
+ECHOSOUNDER_NS <- "http://www.imr.no/formats/nmdechosounder/v1"
+
+# Numbers are written in plain decimal notation: as.character(200000) gives
+# "2e+05", which is not a valid xs:integer (e.g. a 200 kHz frequency).
+xml_value_chr <- function(x) {
+  if (is.numeric(x)) {
+    s <- sub("\\.?0+$", "", sprintf("%.10f", as.double(x)))
+    s[s == "-0"] <- "0"
+  } else {
+    s <- as.character(x)
+  }
+  s[is.na(x)] <- ""
+  s
+}
+
+# sheets: the six Acoustic_LPA sheets (root_metadata, distances, frequencies,
+# ch_types, sa_by_acocat, sa). on_progress(i, n) is called after each distance.
+build_echosounder_xml <- function(sheets, on_progress = function(i, n) NULL) {
+  num <- function(x) suppressWarnings(as.numeric(x))
+  distances_ord    <- sheets$distances    %>% arrange(num(distance_id))
+  frequencies_ord  <- sheets$frequencies  %>% arrange(num(distance_id), freq)
+  ch_types_ord     <- sheets$ch_types     %>% arrange(num(distance_id), freq, type)
+  sa_by_acocat_ord <- sheets$sa_by_acocat %>% arrange(num(distance_id), freq, type, acocat)
+  sa_ord           <- sheets$sa           %>% arrange(num(distance_id), freq, type, acocat, ch)
+  # Older Acoustic_LPA files have no log_start column: fall back to distance_id
+  if (!"log_start" %in% names(distances_ord)) {
+    distances_ord$log_start <- distances_ord$distance_id
+  }
+
+  prepare_data <- function(df) mutate(df, across(everything(), xml_value_chr))
+  distances_ord    <- prepare_data(distances_ord)
+  frequencies_ord  <- prepare_data(frequencies_ord)
+  ch_types_ord     <- prepare_data(ch_types_ord)
+  sa_by_acocat_ord <- prepare_data(sa_by_acocat_ord)
+  sa_ord           <- prepare_data(sa_ord)
+  root_meta        <- prepare_data(sheets$root_metadata)[1, ]
+
+  # Rows of each sheet per distance; an empty table when a distance has none
+  # (e.g. an interval with no NASC has no sa_by_acocat / sa rows).
+  by_dist <- function(df) {
+    parts <- split(df, df$distance_id)
+    function(did) if (is.null(parts[[did]])) df[0, , drop = FALSE] else parts[[did]]
+  }
+  freq_by_dist  <- by_dist(frequencies_ord)
+  cht_by_dist   <- by_dist(ch_types_ord)
+  sacat_by_dist <- by_dist(sa_by_acocat_ord)
+  sa_by_dist    <- by_dist(sa_ord)
+
+  doc <- xml_new_root("echosounder_dataset", xmlns = ECHOSOUNDER_NS)
+  for (nm in c("report_time", "lsss_version", "nation", "platform", "cruise")) {
+    xml_add_child(doc, nm, root_meta[[nm]])
+  }
+  node_list <- xml_add_child(doc, "distance_list")
+
+  total_dist <- nrow(distances_ord)
+  for (i in seq_len(total_dist)) {
+    dist_row <- distances_ord[i, ]
+    did <- dist_row$distance_id
+    node_dist <- xml_add_child(node_list, "distance")
+    xml_set_attr(node_dist, "log_start", dist_row$log_start)
+    xml_set_attr(node_dist, "start_time", dist_row$start_time)
+    for (nm in c("stop_time", "integrator_dist", "pel_ch_thickness", "bot_ch_thickness",
+                 "include_estimate", "lat_start", "lat_stop", "lon_start", "lon_stop")) {
+      xml_add_child(node_dist, nm, dist_row[[nm]])
+    }
+    freq_data  <- freq_by_dist(did)
+    cht_data   <- cht_by_dist(did)
+    sacat_data <- sacat_by_dist(did)
+    sa_data    <- sa_by_dist(did)
+    for (frq in unique(freq_data$freq)) {
+      freq_row <- freq_data[freq_data$freq == frq, ][1, ]
+      node_freq <- xml_add_child(node_dist, "frequency")
+      xml_set_attr(node_freq, "freq", freq_row$freq)
+      xml_set_attr(node_freq, "transceiver", freq_row$transceiver)
+      for (nm in c("threshold", "num_pel_ch", "num_bot_ch", "min_bot_depth", "max_bot_depth",
+                   "upper_interpret_depth", "lower_interpret_depth",
+                   "upper_integrator_depth", "lower_integrator_depth",
+                   "quality", "bubble_corr")) {
+        xml_add_child(node_freq, nm, freq_row[[nm]])
+      }
+      for (typ in unique(cht_data$type[cht_data$freq == frq])) {
+        node_cht <- xml_add_child(node_freq, "ch_type")
+        xml_set_attr(node_cht, "type", typ)
+        acs <- sacat_data$acocat[sacat_data$freq == frq & sacat_data$type == typ]
+        for (ac in unique(acs)) {
+          node_sacat <- xml_add_child(node_cht, "sa_by_acocat")
+          xml_set_attr(node_sacat, "acocat", ac)
+          rows <- sa_data[sa_data$freq == frq & sa_data$type == typ & sa_data$acocat == ac, ]
+          for (k in seq_len(nrow(rows))) {
+            node_sa <- xml_add_child(node_sacat, "sa", rows$value[k])
+            xml_set_attr(node_sa, "ch", rows$ch[k])
+          }
+        }
+      }
+    }
+    on_progress(i, total_dist)
+  }
+  doc
+}
+# ---------------------------------------------------------------
+# 2) User interface
 # ---------------------------------------------------------------
 ui <- fluidPage(
   title = "Acoustic_XML_Editor",
@@ -37,7 +132,7 @@ ui <- fluidPage(
     base_font = font_google("Roboto"),
     heading_font = font_google("Roboto Condensed")
   ),
-  # -------- STYLE PERSONNALISÉ DE LA BARRE DE PROGRESSION --------
+  # -------- Progress bar colours --------
   tags$head(
     tags$style(HTML("
       #header-progress-bar {
@@ -49,7 +144,7 @@ ui <- fluidPage(
     "))
   ),
   useShinyjs(),
-  # Header fixe avec barre de progression
+  # Sticky header with the progress bar
   tags$header(
     class = "sticky-top bg-primary text-white p-3 shadow-sm",
     div(
@@ -64,11 +159,11 @@ ui <- fluidPage(
       )
     )
   ),
-  # Contenu principal
+  # Main content
   div(
     class = "container-fluid mt-5 pt-4",
     fluidRow(
-      # Sidebar - Partie configuration (inchangée)
+      # Sidebar: configuration
       column(
         width = 4,
         div(
@@ -84,7 +179,7 @@ ui <- fluidPage(
               label = tagList(fa("file-excel"), "Import Acoustic_LPA"),
               accept = c(".xlsx"),
               buttonLabel = "Browse…",
-              placeholder = "Sélectionnez un fichier .xlsx",
+              placeholder = "Select an .xlsx file",
               width = "100%"
             ),
             hr(),
@@ -92,27 +187,27 @@ ui <- fluidPage(
               class = "d-grid gap-3",
               actionButton(
                 inputId = "reconstruct_btn",
-                label = tagList(fa("cogs"), "Build XML.file"),
+                label = tagList(fa("cogs"), "Build XML file"),
                 class = "btn-success btn-lg"
               ),
               downloadButton(
                 outputId = "download_xml",
-                label = tagList(fa("download"), "Export Acoustic.XML"),
+                label = tagList(fa("download"), "Export Acoustic XML"),
                 class = "btn-primary btn-lg"
               )
             )
           )
         )
       ),
-      # Main Panel
+      # Main panel
       column(
         width = 8,
-        # Journal d'activité (inchangé)
+        # Activity log
         div(
           class = "card shadow-sm mb-4",
           div(
             class = "card-header bg-primary text-white",
-            h4(class = "mb-0", "Journal d'activité")
+            h4(class = "mb-0", "Activity log")
           ),
           div(
             class = "card-body",
@@ -123,18 +218,18 @@ ui <- fluidPage(
               )
           )
         ),
-        # --------- Aperçu des données déplacé ici ---------
+        # Data preview
         div(
           class = "card shadow-sm",
           div(
             class = "card-header bg-primary text-white",
-            h4(class = "mb-0", "Aperçu des données")
+            h4(class = "mb-0", "Data preview")
           ),
           div(
             class = "card-body p-0",
             navset_pill(
               nav_panel(
-                title = tagList(fa("info-circle"), "Métadonnées"),
+                title = tagList(fa("info-circle"), "Metadata"),
                 div(class = "table-responsive", tableOutput("preview_root_metadata"))
               ),
               nav_panel(
@@ -142,15 +237,15 @@ ui <- fluidPage(
                 div(class = "table-responsive", tableOutput("preview_distances"))
               ),
               nav_panel(
-                title = tagList(fa("wave-square"), "Fréquences"),
+                title = tagList(fa("wave-square"), "Frequencies"),
                 div(class = "table-responsive", tableOutput("preview_frequencies"))
               ),
               nav_panel(
-                title = tagList(fa("layer-group"), "Canaux"),
+                title = tagList(fa("layer-group"), "Channels"),
                 div(class = "table-responsive", tableOutput("preview_ch_types"))
               ),
               nav_panel(
-                title = tagList(fa("chart-bar"), "SA par ACOCAT"),
+                title = tagList(fa("chart-bar"), "SA by ACOCAT"),
                 div(class = "table-responsive", tableOutput("preview_sa_by_acocat"))
               ),
               nav_panel(
@@ -160,15 +255,14 @@ ui <- fluidPage(
             )
           )
         )
-        # ------ Fin du déplacement de l'aperçu ------
       )
     )
   ),
-  # Footer (intentionnellement vide)
+  # Footer (intentionally empty)
   tags$footer(class = "mt-5 py-3 bg-light text-center"),
-  # JavaScript personnalisé
+  # Custom JavaScript
   tags$script(HTML("
-// Initialisation de la barre de progression
+// Progress bar set-up
 $(document).ready(function() {
 $('#progress-header').html(`
 <div class=\"progress\" style=\"height: 25px;\">
@@ -176,12 +270,12 @@ $('#progress-header').html(`
 class=\"progress-bar progress-bar-striped progress-bar-animated\"
 role=\"progressbar\"
 style=\"width: 0%\">
-<span id=\"progress-text\">Prêt</span>
+<span id=\"progress-text\">Ready</span>
 </div>
 </div>
 `);
 });
-// Gestionnaire de messages pour la progression dans la barre en haut
+// Message handler for the progress bar in the header
 Shiny.addCustomMessageHandler('update_progress', function(data) {
 const bar = $('#header-progress-bar');
 const text = $('#progress-text');
@@ -191,48 +285,48 @@ text.text(data.detail || data.value + '%');
 if (data.value >= 100) {
 bar.removeClass('progress-bar-animated progress-bar-striped');
 bar.addClass('bg-success');
-text.text('Terminé !');
+text.text('Done!');
 }
 });
 "))
 )
 # ---------------------------------------------------------------
-# 3) Serveur Optimisé (sans modal)
+# 3) Server
 # ---------------------------------------------------------------
 server <- function(input, output, session) {
-  # Variables réactives
+  # Reactive values
   xml_path <- reactiveVal(NULL)
   perf_data <- reactiveVal(NULL)
   excel_data <- reactiveVal(NULL)
-  preview_data_list <- reactiveVal(NULL) # stocke les 5 premières lignes de chaque feuille
+  preview_data_list <- reactiveVal(NULL) # first 5 rows of each sheet
   # ---------------------------------------------------------------
-  # 3.1. Aperçu des données Excel
+  # 3.1. Excel data preview
   # ---------------------------------------------------------------
   observeEvent(input$excel_file, {
     req(input$excel_file)
-    # Affiche immédiatement un message dans le journal
-    output$status_text <- renderText(" Chargement du fichier Excel…")
-    session$sendCustomMessage("update_progress", list(value = 0, detail = "Chargement Excel"))
+    # Show a message in the log straight away
+    output$status_text <- renderText(" Loading the Excel file…")
+    session$sendCustomMessage("update_progress", list(value = 0, detail = "Loading Excel"))
     tryCatch({
       required_sheets <- c(
         "root_metadata", "distances", "frequencies",
         "ch_types", "sa_by_acocat", "sa"
       )
-      # Lecture des noms de feuilles
+      # Sheet names
       sheet_names <- excel_sheets(input$excel_file$datapath)
       if (!all(required_sheets %in% sheet_names)) {
         stop(
-          "Le fichier Excel doit contenir toutes les feuilles suivantes : ",
+          "The Excel file must contain all of the following sheets: ",
           paste(required_sheets, collapse = ", ")
         )
       }
-      # Lecture des aperçus (5 premières lignes) pour chaque feuille
+      # Previews (first 5 rows) of each sheet
       previews <- map(
         setNames(required_sheets, required_sheets),
         ~ read_excel(input$excel_file$datapath, sheet = .x, n_max = 5)
       )
       preview_data_list(previews)
-      # Stockage des données complètes pour traitement ultérieur
+      # Full data, kept for building the XML
       full_data <- map(
         setNames(required_sheets, required_sheets),
         ~ read_excel(input$excel_file$datapath, sheet = .x)
@@ -240,23 +334,23 @@ server <- function(input, output, session) {
       excel_data(full_data)
       output$status_text <- renderText({
         paste0(
-          " Fichier Excel chargé avec succès.\n",
-          "Feuilles détectées : ", paste(sheet_names, collapse = ", "), "\n",
-          "Aperçu disponible.\n",
-          "Prêt pour la reconstruction."
+          " Excel file loaded.\n",
+          "Sheets found: ", paste(sheet_names, collapse = ", "), "\n",
+          "Preview available.\n",
+          "Ready to build the XML."
         )
       })
       session$sendCustomMessage("update_progress", list(value = 20, detail = "Excel OK"))
     }, error = function(e) {
       preview_data_list(NULL)
       output$status_text <- renderText({
-        paste0(" Erreur pendant l'import Excel :\n", e$message)
+        paste0(" Error while importing the Excel file:\n", e$message)
       })
-      session$sendCustomMessage("update_progress", list(value = 0, detail = "Erreur Excel"))
+      session$sendCustomMessage("update_progress", list(value = 0, detail = "Excel error"))
     })
   })
   # ---------------------------------------------------------------
-  # 3.1.b Rendu statique des aperçus
+  # 3.1.b Preview tables
   # ---------------------------------------------------------------
   output$preview_root_metadata <- renderTable({
     df <- preview_data_list()[["root_metadata"]]
@@ -289,129 +383,26 @@ server <- function(input, output, session) {
     df
   }, striped = TRUE)
   # ---------------------------------------------------------------
-  # 3.2. Reconstruction du XML (sans modal, juste progression en haut)
+  # 3.2. Build the XML (progress shown in the header)
   # ---------------------------------------------------------------
   observeEvent(input$reconstruct_btn, {
     req(excel_data())
-    # **Ajout unique : capture de start_time**
     start_time <- Sys.time()
-    # Début de la reconstruction
-    output$status_text <- renderText(" Début de la reconstruction XML…")
-    session$sendCustomMessage("update_progress", list(value = 20, detail = "Initialisation"))
-    # Création du cache local
-    cache_env <- new.env()
-    # On enchaîne directement, sans modal
+    output$status_text <- renderText(" Building the XML…")
+    session$sendCustomMessage("update_progress", list(value = 20, detail = "Starting"))
     tryCatch({
-      # ─── Phase 1 : Préparation des données (20%) ───
+      # --- Phase 1: data preparation (20%) ---
       timing <- list()
-      timing$debut_preparation <- Sys.time()
-      session$sendCustomMessage("update_progress", list(value = 30, detail = "Préparation"))
-      # Fonction de préparation optimisée (transtype en caractères et remplace NA)
-      prepare_data <- function(df) {
-        df %>%
-          mutate(across(everything(), as.character)) %>%
-          mutate(across(where(~ any(is.na(.x))), ~ ifelse(is.na(.x), "", .x)))
-      }
-      # Préparation des données Excel
-      data_prep <- map(excel_data(), prepare_data)
-      # Classement et ordonnancement
-      distances_ord <- data_prep$distances %>% arrange(distance_id)
-      frequencies_ord <- data_prep$frequencies %>% arrange(distance_id, freq)
-      ch_types_ord <- data_prep$ch_types %>% arrange(distance_id, freq, type)
-      sa_by_acocat_ord <- data_prep$sa_by_acocat %>% arrange(distance_id, freq, type, acocat)
-      sa_ord <- data_prep$sa %>% arrange(distance_id, freq, type, acocat, ch)
-      # Mise en cache de données fréquemment répétées
-      cache_env$sa_by_acocat_ord <- sa_by_acocat_ord
-      cache_env$sa_ord <- sa_ord
-      timing$fin_preparation <- Sys.time()
-      session$sendCustomMessage("update_progress", list(value = 40, detail = "Données prêtes"))
-      # ─── Phase 2 : Construction du XML (60%) ───
-      timing$debut_xml <- Sys.time()
-      session$sendCustomMessage("update_progress", list(value = 50, detail = "Construction XML"))
-      # Création du document XML racine
-      doc <- xml_new_root("echosounder_dataset")
-      # Ajout des métadonnées racines
-      root_meta <- data_prep$root_metadata[1, ]
-      root_values <- list(
-        report_time = root_meta$report_time,
-        lsss_version = root_meta$lsss_version,
-        nation = root_meta$nation,
-        platform = root_meta$platform,
-        cruise = root_meta$cruise
-      )
-      walk(names(root_values), ~ xml_add_child(doc, .x, root_values[[.x]]))
-      # Fonction interne pour ajouter un noeud <distance> complet
-      add_distance_node <- function(did) {
-        dist_data <- distances_ord %>% filter(distance_id == did)
-        ligneD <- dist_data[1, ]
-        node_dist <- xml_add_child(doc, "distance")
-        xml_set_attr(node_dist, "log_start", ligneD$distance_id)
-        xml_set_attr(node_dist, "start_time", ligneD$start_time)
-        # Sous-éléments fixes de <distance>
-        dist_children <- list(
-          stop_time = ligneD$stop_time,
-          integrator_dist = ligneD$integrator_dist,
-          pel_ch_thickness = ligneD$pel_ch_thickness,
-          bot_ch_thickness = ligneD$bot_ch_thickness,
-          include_estimate = ligneD$include_estimate,
-          lat_start = ligneD$lat_start,
-          lat_stop = ligneD$lat_stop,
-          lon_start = ligneD$lon_start,
-          lon_stop = ligneD$lon_stop
-        )
-        walk(names(dist_children), ~ xml_add_child(node_dist, .x, dist_children[[.x]]))
-        # Pour chaque fréquence associée à cette distance
-        freq_data <- frequencies_ord %>% filter(distance_id == did)
-        walk(unique(freq_data$freq), function(frq) {
-          freq_group <- freq_data %>% filter(freq == frq)
-          ligneF <- freq_group[1, ]
-          node_freq <- xml_add_child(node_dist, "frequency")
-          xml_set_attr(node_freq, "freq", ligneF$freq)
-          xml_set_attr(node_freq, "transceiver", ligneF$transceiver)
-          # Sous-éléments fixes de <frequency>
-          freq_children <- list(
-            threshold = ligneF$threshold,
-            num_pel_ch = ligneF$num_pel_ch,
-            num_bot_ch = ligneF$num_bot_ch,
-            min_bot_depth = ligneF$min_bot_depth,
-            max_bot_depth = ligneF$max_bot_depth,
-            upper_interpret_depth = ligneF$upper_interpret_depth,
-            lower_interpret_depth = ligneF$lower_interpret_depth,
-            upper_integrator_depth= ligneF$upper_integrator_depth,
-            lower_integrator_depth= ligneF$lower_integrator_depth,
-            quality = ligneF$quality,
-            bubble_corr = ligneF$bubble_corr
-          )
-          walk(names(freq_children), ~ xml_add_child(node_freq, .x, freq_children[[.x]]))
-          # Pour chaque type de canal (ch_type) sous cette fréquence
-          cht_data <- ch_types_ord %>% filter(distance_id == did, freq == frq)
-          walk(unique(cht_data$type), function(typ) {
-            node_cht <- xml_add_child(node_freq, "ch_type")
-            xml_set_attr(node_cht, "type", typ)
-            # Sous-éléments <sa_by_acocat>
-            sacat_data <- cache_env$sa_by_acocat_ord %>%
-              filter(distance_id == did, freq == frq, type == typ)
-            walk(unique(sacat_data$acocat), function(ac) {
-              node_sacat <- xml_add_child(node_cht, "sa_by_acocat")
-              xml_set_attr(node_sacat, "acocat", ac)
-              # Enfin, ajouter chaque <sa> pour ce acocat
-              sa_data <- cache_env$sa_ord %>%
-                filter(distance_id == did, freq == frq, type == typ, acocat == ac)
-              walk(seq_len(nrow(sa_data)), function(i) {
-                row_i <- sa_data[i, ]
-                node_sa <- xml_add_child(node_sacat, "sa", row_i$value)
-                xml_set_attr(node_sa, "ch", row_i$ch)
-              })
-            })
-          })
-        })
-      }
-      # Exécution de add_distance_node sur chaque ID de distance
-      distance_ids <- unique(distances_ord$distance_id)
-      total_dist <- length(distance_ids)
-      walk2(distance_ids, seq_along(distance_ids), function(did, i) {
-        add_distance_node(did)
-        # Mise à jour périodique de la barre
+      timing$prep_start <- Sys.time()
+      session$sendCustomMessage("update_progress", list(value = 30, detail = "Preparing"))
+      sheets <- excel_data()
+      timing$prep_end <- Sys.time()
+      session$sendCustomMessage("update_progress", list(value = 40, detail = "Data ready"))
+      # --- Phase 2: XML construction (60%) ---
+      timing$xml_start <- Sys.time()
+      session$sendCustomMessage("update_progress", list(value = 50, detail = "Building XML"))
+      doc <- build_echosounder_xml(sheets, on_progress = function(i, total_dist) {
+        # Update the progress bar
         progress <- 50 + 40 * (i / total_dist)
         session$sendCustomMessage(
           "update_progress",
@@ -421,46 +412,44 @@ server <- function(input, output, session) {
           )
         )
       })
-      timing$fin_xml <- Sys.time()
-      session$sendCustomMessage("update_progress", list(value = 90, detail = "Construction OK"))
-      # ─── Phase 3 : Écriture du fichier (20%) ───
-      timing$debut_ecriture <- Sys.time()
-      session$sendCustomMessage("update_progress", list(value = 95, detail = "Écriture XML"))
-      nom_fichier <- paste0("Aoustic_LPA_", format(Sys.time(), "%Y%m%d_%H%M%S"), ".xml")
-      tmpfile <- file.path(tempdir(), nom_fichier)
+      timing$xml_end <- Sys.time()
+      session$sendCustomMessage("update_progress", list(value = 90, detail = "XML built"))
+      # --- Phase 3: writing the file (20%) ---
+      timing$write_start <- Sys.time()
+      session$sendCustomMessage("update_progress", list(value = 95, detail = "Writing XML"))
+      file_name <- paste0("Acoustic_LPA_", format(Sys.time(), "%Y%m%d_%H%M%S"), ".xml")
+      tmpfile <- file.path(tempdir(), file_name)
       write_xml(doc, file = tmpfile, encoding = "UTF-8")
       xml_path(tmpfile)
-      timing$fin_ecriture <- Sys.time()
-      session$sendCustomMessage("update_progress", list(value = 100, detail = "Terminé !"))
-      # Calcul des performances
+      timing$write_end <- Sys.time()
+      session$sendCustomMessage("update_progress", list(value = 100, detail = "Done!"))
+      # Timings
       perf <- list(
-        lecture = 0,
-        preparation = as.numeric(difftime(timing$fin_preparation, timing$debut_preparation, units = "secs")),
-        xml = as.numeric(difftime(timing$fin_xml, timing$debut_xml, units = "secs")),
-        ecriture = as.numeric(difftime(timing$fin_ecriture, timing$debut_ecriture, units = "secs")),
+        preparation = as.numeric(difftime(timing$prep_end, timing$prep_start, units = "secs")),
+        xml = as.numeric(difftime(timing$xml_end, timing$xml_start, units = "secs")),
+        writing = as.numeric(difftime(timing$write_end, timing$write_start, units = "secs")),
         total = as.numeric(difftime(Sys.time(), start_time, units = "secs"))
       )
       perf_data(perf)
-      # Message de fin
       output$status_text <- renderText({
         paste0(
-          " Reconstruction terminée avec succès !\n",
-          "Temps total : ", round(perf$total, 2), " secondes\n",
-          "- Préparation des données : ", round(perf$preparation, 2), " s\n",
-          "- Construction XML : ", round(perf$xml, 2), " s\n",
-          "- Écriture du fichier : ", round(perf$ecriture, 2), " s\n\n",
-          "Fichier généré : ", xml_path()
+          " XML built successfully.\n",
+          "Total time: ", round(perf$total, 2), " seconds\n",
+          "- Data preparation: ", round(perf$preparation, 2), " s\n",
+          "- XML construction: ", round(perf$xml, 2), " s\n",
+          "- Writing the file: ", round(perf$writing, 2), " s\n\n",
+          "File created: ", xml_path()
         )
       })
     }, error = function(e) {
       output$status_text <- renderText({
-        paste0(" Erreur lors de la reconstruction :\n", e$message)
+        paste0(" Error while building the XML:\n", e$message)
       })
-      session$sendCustomMessage("update_progress", list(value = 0, detail = "Erreur"))
+      session$sendCustomMessage("update_progress", list(value = 0, detail = "Error"))
     })
   })
   # ---------------------------------------------------------------
-  # 3.3. Téléchargement du XML
+  # 3.3. Download the XML
   # ---------------------------------------------------------------
   output$download_xml <- downloadHandler(
     filename = function() {
@@ -478,6 +467,8 @@ server <- function(input, output, session) {
   )
 }
 # ---------------------------------------------------------------
-# 4) Lancement de l'application
+# 4) Launch the application
 # ---------------------------------------------------------------
+shinyApp(ui = ui, server = server)
+NA
 shinyApp(ui = ui, server = server)

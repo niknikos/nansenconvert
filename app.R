@@ -1,21 +1,19 @@
 # ============================================================================
 # Excel XML Converter
-# Application Shiny globale regroupant 4 applications indépendantes.
-# Chaque application est intégrée telle quelle, sans modification de son code
-# interne (UI / server / logique). L'intégration se fait par encapsulation :
-#   - chaque script est sourcé dans un environnement isolé,
-#   - la fonction shinyApp() y est neutralisée afin de capturer `ui` et `server`,
-#   - les UI sont placées chacune dans un tabPanel d'un navbarPage global,
-#   - les server sont invoqués côte à côte dans le server global.
+# Single Shiny application that brings together 4 standalone applications.
+# Each application is embedded as is; the integration works by wrapping:
+#   - each script is sourced into its own environment,
+#   - shinyApp() is replaced there so that `ui` and `server` can be captured,
+#   - each UI goes into a tabPanel of one navbarPage,
+#   - the servers are called side by side in the main server.
 # ============================================================================
 
 library(shiny)
 library(bslib)
 library(shinyjs)
 
-# --- Liste des applications à intégrer --------------------------------------
-# Le nom de chaque entrée correspond exactement au nom de l'application
-# et sera utilisé comme libellé du tabPanel.
+# --- Applications to embed --------------------------------------------------
+# Each entry's name is the application's name and is used as its tab label.
 app_files <- list(
   "BioData_To_Biotic.xls"        = "BioData_To_Biotic.xls.R",
   "Biotic.xls_To_Biotic.xml"     = "Biotic.xls_To_Biotic.xml.R",
@@ -31,10 +29,10 @@ if (is.null(app_dir) || !nzchar(app_dir) || !dir.exists(app_dir)) {
   app_dir <- getwd()
 }
 
-# --- Chargement encapsulé de chaque application -----------------------------
+# --- Load each application in its own environment ---------------------------
 load_app <- function(path) {
   env <- new.env(parent = globalenv())
-  # Neutralisation des lanceurs pour capturer ui/server sans démarrer l'app.
+  # Replace the launchers so ui/server are captured without starting the app.
   env$shinyApp <- function(ui = NULL, server = NULL, ...) {
     assign("ui",     ui,     envir = env)
     assign("server", server, envir = env)
@@ -48,10 +46,10 @@ load_app <- function(path) {
 apps <- lapply(app_files, function(f) load_app(file.path(app_dir, f)))
 names(apps) <- names(app_files)
 
-# Panneau « Excel files model » (export des modèles data/)
+# "Excel file templates" tab (downloads the templates in data/)
 source(file.path(app_dir, "excel_models_tab.R"), local = FALSE)
 
-# --- Splash (écran d'accueil, inliné, sans fichier externe) -----------------
+# --- Splash screen (inline, no external file) -------------------------------
 splash_ui <- tags$div(
   id = "app_splash",
   tags$style(HTML("
@@ -120,22 +118,22 @@ splash_ui <- tags$div(
     tags$h1(class = "splash-title", "Excel XML Converter"),
     tags$div(class = "splash-subtitle", "LPA – 2026 : by KMZ"),
     tags$p(class = "splash-desc",
-      "Suite intégrée de conversion des données Excel vers les formats XML NMDBiotic et Acoustic Stox compatibles."),
+      "Integrated suite for converting Excel data to StoX-compatible NMDBiotic and Acoustic XML formats."),
     tags$div(class = "splash-modules",
       tags$div(tags$b("BioData"), " → Biotic.xls"),
       tags$div(tags$b("Biotic.xls"), " → Biotic.xml"),
       tags$div(tags$b("NASC"), " → Acoustic.xlsx"),
       tags$div(tags$b("Acoustic.xls"), " → Acoustic.xml")
     ),
-    actionButton("btn_launch_app", "\U0001F680 Lancer l'application", class = "btn")
+    actionButton("btn_launch_app", "\U0001F680 Launch the application", class = "btn")
   )
 )
 
-# --- UI globale -------------------------------------------------------------
+# --- Main UI ----------------------------------------------------------------
 main_ui <- navbarPage(
   title = tagList(
     tags$img(
-      src = "logo.PNG",
+      src = "logo.png",
       height = "75",
       class = "me-2 align-text-top d-inline",
       style = "object-fit: contain; max-width: 240px; height: 75px; width: auto;",
@@ -147,10 +145,10 @@ main_ui <- navbarPage(
   theme = tryCatch(bslib::bs_theme(version = 5), error = function(e) NULL),
   header = tags$head(
     tags$style(HTML("
-      /* Titre global (brand) */
+      /* Main title (brand) */
       .navbar-brand { font-weight: 700; letter-spacing: 0.3px; }
 
-      /* Conteneur nav : flex space-between entre titre/tabs et signature */
+      /* Nav container: title/tabs on the left, signature on the right */
       .navbar > .container-fluid,
       .navbar > .container {
         display: flex;
@@ -160,7 +158,7 @@ main_ui <- navbarPage(
       }
       .navbar .navbar-nav { align-items: center; }
 
-      /* Signature laboratoire, alignée à droite (couleur = texte navbar pour thème clair/sombre) */
+      /* Laboratory signature, right-aligned (navbar text colour, for light and dark themes) */
       .app-signature {
         margin-left: auto;
         padding: 6px 14px;
@@ -192,7 +190,7 @@ main_ui <- navbarPage(
     tags$script(HTML("
       (function() {
         var SIG = 'LPA \\u2013 2026 : by KMZ';
-        /* Uniquement la navbar du header global (exclut les barres des sous-applications dans les onglets). */
+        /* Only the main header navbar (not the navbars of the sub-applications inside the tabs). */
         function getGlobalHeaderNav() {
           var navs = document.querySelectorAll('nav.navbar');
           for (var i = 0; i < navs.length; i++) {
@@ -225,8 +223,13 @@ main_ui <- navbarPage(
           tries++;
           if (inject() || tries > 20) clearInterval(iv);
         }, 200);
-        var mo = new MutationObserver(function() { inject(); });
-        mo.observe(document.body, { childList: true, subtree: true });
+        /* This script runs in <head>: wait for <body> before observing it. */
+        function observeBody() {
+          var mo = new MutationObserver(function() { inject(); });
+          mo.observe(document.body, { childList: true, subtree: true });
+        }
+        if (document.body) observeBody();
+        else document.addEventListener('DOMContentLoaded', observeBody);
       })();
     "))
   ),
@@ -234,7 +237,7 @@ main_ui <- navbarPage(
   tabPanel("Biotic.xls_To_Biotic.xml",     apps[["Biotic.xls_To_Biotic.xml"]]$ui),
   tabPanel("NASC.xls_To_Acoustic.xml",     apps[["NASC.xls_To_Acoustic.xml"]]$ui),
   tabPanel("Acoustic.xls_To_Acoustic.xml", apps[["Acoustic.xls_To_Acoustic.xml"]]$ui),
-  tabPanel("Excel files model", ui_excel_files_model()),
+  tabPanel("Excel file templates", ui_excel_files_model()),
   tabPanel("User_Guide",
     fluidPage(
       br(),
@@ -243,7 +246,7 @@ main_ui <- navbarPage(
   )
 )
 
-# Composition finale : splash superposé + navbarPage (masqué tant que splash visible)
+# Final layout: splash screen on top + navbarPage (hidden while the splash is shown)
 ui <- tagList(
   useShinyjs(),
   tags$head(tags$style(HTML("#app_main_wrapper.splash-active { display: none !important; }"))),
@@ -251,7 +254,7 @@ ui <- tagList(
   tags$div(id = "app_main_wrapper", class = "splash-active", main_ui)
 )
 
-# --- Server global : délègue à chaque server d'application ------------------
+# --- Main server: calls each application's server ---------------------------
 server <- function(input, output, session) {
   observeEvent(input$btn_launch_app, {
     shinyjs::hide("app_splash", anim = TRUE, animType = "fade", time = 0.35)

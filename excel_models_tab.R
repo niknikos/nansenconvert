@@ -1,4 +1,4 @@
-# Panneau « Excel files model » — modèles dans data/ (sourcé par app.R)
+# "Excel file templates" tab: templates stored in data/ (sourced by app.R)
 
 excel_model_bases <- c(
   "Length-frequency_model",
@@ -30,24 +30,24 @@ resolve_excel_model_path <- function(base_name, data_dir) {
 }
 
 build_excel_model_choices <- function() {
-  c("Sélectionner…" = "", EXCEL_MODEL_LABELS)
+  c("Select…" = "", EXCEL_MODEL_LABELS)
 }
 
 ui_excel_files_model <- function() {
   fluidPage(
     fluidRow(
       column(6,
-        h5("Téléchargement ciblé"),
-        selectizeInput("excel_model_pick", "Choisir un modèle", choices = build_excel_model_choices(),
-          selected = "", options = list(placeholder = "Sélectionner un fichier…")
+        h5("Single template"),
+        selectizeInput("excel_model_pick", "Choose a template", choices = build_excel_model_choices(),
+          selected = "", options = list(placeholder = "Select a file…")
         ),
-        helpText("Télécharge un seul fichier Excel présent dans data/."),
-        downloadButton("dl_excel_model_one", "Télécharger le modèle", class = "btn-primary w-100")
+        helpText("Downloads one of the Excel templates stored in data/."),
+        downloadButton("dl_excel_model_one", "Download template", class = "btn-primary w-100")
       ),
       column(6,
         h5("Archive"),
-        helpText("Crée ", tags$code("LPA_excel_models.zip"), " (tous les modèles disponibles)."),
-        downloadButton("dl_excel_model_zip", "Télécharger tous les modèles (ZIP)", class = "btn-success w-100")
+        helpText("Creates ", tags$code("LPA_excel_models.zip"), " (all available templates)."),
+        downloadButton("dl_excel_model_zip", "Download all templates (ZIP)", class = "btn-success w-100")
       )
     )
   )
@@ -59,17 +59,17 @@ excel_models_server <- function(input, output, session, data_dir) {
       pick <- input$excel_model_pick
       req(!is.null(pick), nzchar(pick))
       p <- resolve_excel_model_path(pick, data_dir)
-      if (is.na(p) || !file.exists(p)) "modele.xlsx" else basename(p)
+      if (is.na(p) || !file.exists(p)) "template.xlsx" else basename(p)
     },
     content = function(file) {
       pick <- input$excel_model_pick
       if (is.null(pick) || !nzchar(pick)) {
-        showNotification("Choisissez un modèle dans la liste.", type = "warning", duration = 4)
+        showNotification("Choose a template from the list.", type = "warning", duration = 4)
         return()
       }
       p <- resolve_excel_model_path(pick, data_dir)
       if (is.na(p) || !file.exists(p)) {
-        showNotification("Fichier modèle introuvable dans data/.", type = "error", duration = 5)
+        showNotification("Template file not found in data/.", type = "error", duration = 5)
         con <- file(file, "wb")
         on.exit(close(con), add = FALSE)
         writeBin(raw(0L), con)
@@ -87,7 +87,7 @@ excel_models_server <- function(input, output, session, data_dir) {
       )
       ok <- paths[!is.na(paths) & file.exists(paths)]
       if (length(ok) < 1L) {
-        showNotification("Aucun modèle dans data/ — ZIP vide.", type = "warning", duration = 6)
+        showNotification("No template in data/: the ZIP is empty.", type = "warning", duration = 6)
         con <- file(file, "wb")
         on.exit(close(con), add = FALSE)
         writeBin(raw(0L), con)
