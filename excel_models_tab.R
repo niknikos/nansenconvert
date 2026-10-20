@@ -46,7 +46,7 @@ ui_excel_files_model <- function() {
       ),
       column(6,
         h5("Archive"),
-        helpText("Creates ", tags$code("LPA_excel_models.zip"), " (all available templates)."),
+        helpText("Creates ", tags$code("nansenconvert_templates.zip"), " (all available templates)."),
         downloadButton("dl_excel_model_zip", "Download all templates (ZIP)", class = "btn-success w-100")
       )
     )
@@ -80,7 +80,7 @@ excel_models_server <- function(input, output, session, data_dir) {
   )
 
   output$dl_excel_model_zip <- downloadHandler(
-    filename = function() "LPA_excel_models.zip",
+    filename = function() "nansenconvert_templates.zip",
     content = function(file) {
       paths <- vapply(
         excel_model_bases, resolve_excel_model_path, character(1L), data_dir = data_dir

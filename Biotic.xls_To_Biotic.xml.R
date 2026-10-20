@@ -1,4 +1,4 @@
-# app.R - Biotic_LPA.xlsx -> NMDBiotic v3.1 XML
+# app.R - Biotic.xlsx -> NMDBiotic v3.1 XML
 # 🚀 Packages
 library(shiny)
 library(bslib)       # Theme colours
@@ -289,7 +289,7 @@ ui <- fluidPage(
           ),
           div(class = "subtitle",
               tags$i(class = "fas fa-info-circle"),
-              " Converts LPA Excel files to the NMDBiotic XML format (StoX)"
+              " Converts a Biotic workbook to the NMDBiotic XML format (StoX)"
           )
       )
   ),
@@ -314,7 +314,7 @@ ui <- fluidPage(
                 inputId = "excelFile",
                 label   = tagList(
                   tags$i(class = "fas fa-file-excel", style = "color:#217346; margin-right:6px;"),
-                  "Import Biotic_LPA"
+                  "Import Biotic workbook (.xlsx)"
                 ),
                 accept      = c(".xlsx"),
                 buttonLabel = "Browse…",
@@ -350,7 +350,7 @@ ui <- fluidPage(
                            tags$i(class = "fas fa-list-ol"), " Steps"),
                   div(class = "step", span(class = "step-number", "1"), "Choose the Excel file"),
                   div(class = "step", span(class = "step-number", "2"), "Wait for the XML to be generated"),
-                  div(class = "step", span(class = "step-number", "3"), "Download Biotic_LPA.xml")
+                  div(class = "step", span(class = "step-number", "3"), "Download Biotic.xml")
               )
           )
         ),
@@ -390,7 +390,7 @@ ui <- fluidPage(
           tags$i(class = "fas fa-fish"),
           "NMDBiotic v3.1 • ",
           tags$i(class = "fas fa-code-branch"),
-          "LPA converter"
+          "Nansen Converter"
       )
   )
 )
@@ -461,7 +461,7 @@ server <- function(input, output, session) {
       if (n_no_aphia > 0) {
         showNotification(
           paste0(n_no_aphia, " catch sample(s) have no aphia code, which NMDBiotic requires. ",
-                 "Match their species to WoRMS in Catchsamples_LPA."),
+                 "Match their species to WoRMS in Catchsamples."),
           type = "warning", duration = 12
         )
       }
@@ -520,10 +520,10 @@ server <- function(input, output, session) {
     as.character(xmlDoc())
   })
 
-  # 4. Download the XML as "Biotic_LPA.xml"
+  # 4. Download the XML as "Biotic.xml"
   output$downloadXML <- downloadHandler(
     filename = function() {
-      "Biotic_LPA.xml"
+      "Biotic.xml"
     },
     content = function(file) {
       xml2::write_xml(xmlDoc(), file, options = "format")
@@ -565,14 +565,14 @@ server <- function(input, output, session) {
 
   # The panel shows whichever was produced last: the converted file or an upload
   shownValidation <- reactiveVal(NULL)
-  observeEvent(convertedValidation(), shownValidation(list(what = "the converted Biotic_LPA data",
+  observeEvent(convertedValidation(), shownValidation(list(what = "the converted Biotic data",
                                                            f = convertedValidation())))
   observeEvent(uploadedValidation(), shownValidation(list(what = paste("the uploaded file", input$xmlValidateFile$name),
                                                           f = uploadedValidation())))
 
   output$validationSummary <- renderUI({
     v <- shownValidation()
-    if (is.null(v)) return(p(class = "text-muted small", "Load a Biotic_LPA workbook, or an existing Biotic XML, to validate it."))
+    if (is.null(v)) return(p(class = "text-muted small", "Load a Biotic workbook, or an existing Biotic XML, to validate it."))
     tagList(p(class = "small mb-1", "Results for ", strong(v$what), ":"), findings_badges(v$f))
   })
   output$validationTable <- DT::renderDT({

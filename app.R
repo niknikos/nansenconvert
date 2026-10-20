@@ -1,5 +1,7 @@
 # ============================================================================
-# Excel XML Converter
+# nansenconvert - Nansen Converter
+# Converts survey data to the NMD Biotic and Echosounder XML formats used by
+# StoX. Based on the LPA "Excel XML Converter" (2026) by KMZ.
 # Single Shiny application that brings together 4 standalone applications.
 # Each application is embedded as is; the integration works by wrapping:
 #   - each script is sourced into its own environment,
@@ -120,17 +122,19 @@ splash_ui <- tags$div(
     }
   ")),
   tags$div(class = "splash-card",
-    tags$h1(class = "splash-title", "Excel XML Converter"),
-    tags$div(class = "splash-subtitle", "LPA – 2026 : by KMZ"),
+    tags$h1(class = "splash-title", "Nansen Converter"),
+    tags$div(class = "splash-subtitle", "EAF-Nansen tool suite"),
     tags$p(class = "splash-desc",
-      "Integrated suite for converting Excel data to StoX-compatible NMDBiotic and Acoustic XML formats."),
+      "Converts survey data to the NMD Biotic and Echosounder XML formats used by StoX."),
     tags$div(class = "splash-modules",
-      tags$div(tags$b("BioData"), " → Biotic.xls"),
-      tags$div(tags$b("Biotic.xls"), " → Biotic.xml"),
+      tags$div(tags$b("Field data"), " → Biotic.xlsx"),
+      tags$div(tags$b("Biotic.xlsx"), " → Biotic.xml"),
       tags$div(tags$b("NASC"), " → Acoustic.xlsx"),
-      tags$div(tags$b("Acoustic.xls"), " → Acoustic.xml")
+      tags$div(tags$b("Acoustic.xlsx"), " → Acoustic.xml")
     ),
-    actionButton("btn_launch_app", "\U0001F680 Launch the application", class = "btn")
+    actionButton("btn_launch_app", "\U0001F680 Launch the application", class = "btn"),
+    tags$p(class = "splash-desc", style = "margin: 22px 0 0 0; font-size: 0.82rem; opacity: 0.75;",
+      "Based on the LPA Excel XML Converter (2026) by KMZ.")
   )
 )
 
@@ -144,9 +148,9 @@ main_ui <- navbarPage(
       style = "object-fit: contain; max-width: 240px; height: 75px; width: auto;",
       alt = ""
     ),
-    "Excel XML Converter"
+    "Nansen Converter"
   ),
-  id = "excel_xml_converter_main",
+  id = "nansenconvert_main",
   theme = tryCatch(bslib::bs_theme(version = 5), error = function(e) NULL),
   header = tags$head(
     tags$style(HTML("
@@ -194,7 +198,7 @@ main_ui <- navbarPage(
     ")),
     tags$script(HTML("
       (function() {
-        var SIG = 'LPA \\u2013 2026 : by KMZ';
+        var SIG = 'EAF-Nansen tool suite';
         /* Only the main header navbar (not the navbars of the sub-applications inside the tabs). */
         function getGlobalHeaderNav() {
           var navs = document.querySelectorAll('nav.navbar');

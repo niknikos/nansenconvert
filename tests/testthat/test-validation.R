@@ -2,12 +2,12 @@ checks_of <- function(f) unique(f$check)
 nasc_conv <- load_converter("NASC.xls_To_Acoustic.xml.R")
 aco_conv <- load_converter("Acoustic.xls_To_Acoustic.xml.R")
 template_sheets <- function() {
-  nasc_conv$build_lpa_from_nasc_staged(as.data.frame(readxl::read_excel(data_file("NASC_model.xlsx"))),
-                                       NASC_MD, nasc_conv$NASC_ACOUSTIC_DEFAULTS)$lpa_sheets
+  nasc_conv$build_acoustic_sheets(as.data.frame(readxl::read_excel(data_file("NASC_model.xlsx"))),
+                                       NASC_MD, nasc_conv$NASC_ACOUSTIC_DEFAULTS)$acoustic_sheets
 }
 
 test_that("planted Biotic errors are found", {
-  tabs <- read_biotic_lpa(biotic_chain()$biotic_xlsx)
+  tabs <- read_biotic_workbook(biotic_chain()$biotic_xlsx)
   tabs$fishstations$serialnumber[2] <- tabs$fishstations$serialnumber[1]
   tabs$fishstations$distance[3] <- "61.2"
   tabs$fishstations$gear[4] <- "9999"
@@ -25,7 +25,7 @@ test_that("planted Biotic errors are found", {
 })
 
 test_that("a station on land and positions far from the recorded distance are flagged", {
-  tabs <- read_biotic_lpa(biotic_chain()$biotic_xlsx)
+  tabs <- read_biotic_workbook(biotic_chain()$biotic_xlsx)
   tabs$fishstations$latitudestart[1] <- "20.8"; tabs$fishstations$longitudestart[1] <- "-15.9"   # inland
   tabs$fishstations$latitudeend[2] <- as.character(as.numeric(tabs$fishstations$latitudeend[2]) + 1)
   f <- validate_biotic(tabs)
@@ -55,7 +55,7 @@ test_that("Species_percent that does not add up to 100 is flagged", {
 })
 
 test_that("an uploaded Acoustic XML can be validated on its own", {
-  sh <- nasc_conv$build_lpa_from_nasc_staged(make_nasc(), NASC_MD, nasc_conv$NASC_ACOUSTIC_DEFAULTS)$lpa_sheets
+  sh <- nasc_conv$build_acoustic_sheets(make_nasc(), NASC_MD, nasc_conv$NASC_ACOUSTIC_DEFAULTS)$acoustic_sheets
   f <- tempfile(fileext = ".xml"); xml2::write_xml(aco_conv$build_echosounder_xml(sh), f)
   back <- acoustic_sheets_from_xml(f)
   expect_equal(nrow(back$distances), 2)

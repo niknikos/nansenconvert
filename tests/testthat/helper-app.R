@@ -65,7 +65,7 @@ run_biotic_chain <- function(out_dir = tempfile("biotic_")) {
   p <- function(f) file.path(out_dir, f)
   writexl::write_xlsx(res$missions, p("m.xlsx")); writexl::write_xlsx(res$stations, p("f.xlsx"))
   writexl::write_xlsx(res$catches, p("c.xlsx")); writexl::write_xlsx(list(Individuals = res$individuals), p("i.xlsx"))
-  res$biotic_xlsx <- p("Biotic_LPA.xlsx")
+  res$biotic_xlsx <- p("Biotic.xlsx")
   testServer(bio$mod_biotic_server, {
     session$setInputs(in_missions = list(name = "m.xlsx", datapath = p("m.xlsx")),
                       in_fish = list(name = "f.xlsx", datapath = p("f.xlsx")),
@@ -76,9 +76,9 @@ run_biotic_chain <- function(out_dir = tempfile("biotic_")) {
     file.copy(output$download_biotic, res$biotic_xlsx, overwrite = TRUE)
   })
   bx <- load_converter("Biotic.xls_To_Biotic.xml.R")
-  res$biotic_xml <- p("Biotic_LPA.xml")
+  res$biotic_xml <- p("Biotic.xml")
   testServer(bx$server, {
-    session$setInputs(excelFile = list(name = "Biotic_LPA.xlsx", datapath = res$biotic_xlsx))
+    session$setInputs(excelFile = list(name = "Biotic.xlsx", datapath = res$biotic_xlsx))
     xml2::write_xml(xmlDoc(), res$biotic_xml, options = "format")
     res$validation <<- convertedValidation()
   })
@@ -119,7 +119,7 @@ make_nasc <- function() {
 NASC_MD <- list(report_time = "2026-03-13 12:00:00", lsss_version = "Echoview", nation = "58",
                 platform = "1172", cruise = "SYN2026")
 
-read_biotic_lpa <- function(path) {
+read_biotic_workbook <- function(path) {
   rd <- function(s) as.data.frame(readxl::read_excel(path, sheet = s, col_types = "text"))
   list(missions = rd("missions"), fishstations = rd("fishstations"),
        catchesamples = rd("catchesamples"), individuals = rd("individuals"))

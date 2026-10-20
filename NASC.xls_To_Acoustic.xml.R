@@ -30,7 +30,7 @@ NASC_ACOUSTIC_DEFAULTS <- list(
 )
 
 # ---------------------------------------------------------------
-# 0.b) NASC quality control + building Acoustic_LPA
+# 0.b) NASC quality control + building Acoustic
 # ---------------------------------------------------------------
 nasc_coord_invalid <- function(lat, lon) {
   lat <- suppressWarnings(as.numeric(lat))
@@ -117,7 +117,7 @@ nasc_dist_nmi <- function(lat1, lon1, lat2, lon2) {
   d
 }
 
-build_lpa_from_nasc_staged <- function(df_nasc, md, settings = NASC_ACOUSTIC_DEFAULTS,
+build_acoustic_sheets <- function(df_nasc, md, settings = NASC_ACOUSTIC_DEFAULTS,
                                        acocat_map = NULL) {
   # Optional Echoview columns used for the sailed distance when present
   for (cn in c("VL_start", "VL_end", "Dist_S", "Dist_E")) {
@@ -284,7 +284,7 @@ build_lpa_from_nasc_staged <- function(df_nasc, md, settings = NASC_ACOUSTIC_DEF
       log_source    = log_source,
       acocat_used   = acocat_used
     ),
-    lpa_sheets     = list(
+    acoustic_sheets     = list(
       root_metadata = df_root_metadata,
       distances     = df_distances,
       frequencies   = df_frequencies,
@@ -306,7 +306,7 @@ ui <- fluidPage(
     bg = "#f8f9fa"
   ),
 
-  titlePanel("NASC → Acoustic_LPA converter"),
+  titlePanel("NASC → Acoustic converter"),
 
   sidebarLayout(
     sidebarPanel(
@@ -351,14 +351,14 @@ ui <- fluidPage(
       # 4. Action buttons
       actionButton("btn_process",       "🔄 Process file",                   class = "btn-primary"),
       tags$br(), tags$br(),
-      downloadButton("dl_acoustic_lpa", "💾 Download Acoustic_LPA.xlsx",     class = "btn-success")
+      downloadButton("dl_acoustic_xlsx", "💾 Download Acoustic.xlsx",     class = "btn-success")
     ),
 
     mainPanel(
       width = 9,
       uiOutput("ui_row_qc"),
-      # Preview of the 6 Acoustic_LPA sheets (shown after processing)
-      uiOutput("ui_preview_lpa")
+      # Preview of the 6 Acoustic sheets (shown after processing)
+      uiOutput("ui_preview_sheets")
     )
   )
 )
@@ -372,8 +372,8 @@ server <- function(input, output, session) {
   rv <- reactiveValues(
     nasc_raw        = NULL,
     nasc_processed  = NULL,
-    lpa_sheets      = NULL,
-    lpa_notes       = NULL,
+    acoustic_sheets      = NULL,
+    acoustic_notes       = NULL,
     nasc_staged     = NULL,
     n_bad_coord     = 0L,
     n_no_sa         = 0L,
@@ -409,12 +409,12 @@ server <- function(input, output, session) {
   apply_nasc_staged <- function(df_staged) {
     s <- nasc_settings(input)
     acocat_map <- acocat_map_for(unique(df_staged$Species_name), cl$lists, s$acocat_level)
-    res <- build_lpa_from_nasc_staged(df_staged, nasc_md(input), s, acocat_map = acocat_map)
+    res <- build_acoustic_sheets(df_staged, nasc_md(input), s, acocat_map = acocat_map)
     rv$species_pct <- validate_species_percent(df_staged)
     rv$nasc_raw       <- res$nasc_raw
     rv$nasc_processed <- res$nasc_processed
-    rv$lpa_sheets     <- res$lpa_sheets
-    rv$lpa_notes      <- res$notes
+    rv$acoustic_sheets     <- res$acoustic_sheets
+    rv$acoustic_notes      <- res$notes
   }
 
   # Metadata or settings typed after processing are applied straight away
@@ -446,7 +446,7 @@ server <- function(input, output, session) {
 
   # Flags that show the previews
   show_nasc_preview <- reactiveVal(FALSE)
-  show_lpa_preview  <- reactiveVal(FALSE)
+  show_sheet_preview  <- reactiveVal(FALSE)
 
   # -------------------------------------------------------------
   # 2.1) Process the NASC data when "btn_process" is clicked
@@ -522,21 +522,21 @@ server <- function(input, output, session) {
     rv$n_no_sa     <- sum(nasc_rows_no_sa(rv$nasc_staged))
     apply_nasc_staged(rv$nasc_staged)
 
-    # Show the Acoustic_LPA preview after processing
+    # Show the Acoustic preview after processing
     show_nasc_preview(FALSE)
-    show_lpa_preview(TRUE)
+    show_sheet_preview(TRUE)
 
     # Tell the user that processing is finished
     showModal(modalDialog(
       title = "✅ Processing complete",
-      "The NASC file has been converted and the Acoustic_LPA sheets are ready.",
+      "The NASC file has been converted and the Acoustic sheets are ready.",
       easyClose = TRUE, footer = NULL
     ))
   })
 
   output$ui_row_qc <- renderUI({
-    if (is.null(rv$lpa_sheets)) return(NULL)
-    notes <- rv$lpa_notes
+    if (is.null(rv$acoustic_sheets)) return(NULL)
+    notes <- rv$acoustic_notes
     len_src <- if (!is.null(notes$length_source) && length(notes$length_source)) {
       paste0(names(notes$length_source), ": ", as.integer(notes$length_source), collapse = "; ")
     } else {
@@ -598,7 +598,7 @@ server <- function(input, output, session) {
   }, striped = TRUE, spacing = "xs")
 
   output$tbl_acocat_used <- renderTable({
-    a <- rv$lpa_notes$acocat_used
+    a <- rv$acoustic_notes$acocat_used
     req(a, nrow(a))
     data.frame(
       Species_name = a$name, acocat = a$acocat, category = a$acousticCategory,
@@ -635,9 +635,9 @@ server <- function(input, output, session) {
     rv$n_bad_coord <- sum(nasc_rows_bad_coords(df))
     rv$n_no_sa     <- sum(nasc_rows_no_sa(df))
     apply_nasc_staged(df)
-    show_lpa_preview(TRUE)
+    show_sheet_preview(TRUE)
     msg <- sprintf(
-      "<strong>✅ %d row(s) removed</strong> (invalid coordinates). NASC: <strong>%d</strong> row(s) left. Acoustic_LPA preview updated.",
+      "<strong>✅ %d row(s) removed</strong> (invalid coordinates). NASC: <strong>%d</strong> row(s) left. Acoustic preview updated.",
       n_rem,
       nrow(df)
     )
@@ -678,18 +678,18 @@ server <- function(input, output, session) {
   })
 
   # -------------------------------------------------------------
-  # 2.3) Preview of the 6 Acoustic_LPA sheets (when "btn_preview_lpa" is clicked)
+  # 2.3) Preview of the 6 Acoustic sheets (when "btn_preview_sheets" is clicked)
   # -------------------------------------------------------------
-  observeEvent(input$btn_preview_lpa, {
-    req(rv$lpa_sheets)
-    show_lpa_preview(TRUE)
+  observeEvent(input$btn_preview_sheets, {
+    req(rv$acoustic_sheets)
+    show_sheet_preview(TRUE)
   })
 
-  output$ui_preview_lpa <- renderUI({
-    if (!isTRUE(show_lpa_preview())) return(NULL)
+  output$ui_preview_sheets <- renderUI({
+    if (!isTRUE(show_sheet_preview())) return(NULL)
 
     # One tab per sheet
-    tabs <- lapply(names(rv$lpa_sheets), function(sheet_name) {
+    tabs <- lapply(names(rv$acoustic_sheets), function(sheet_name) {
       tabPanel(
         title = sheet_name,
         div(style = "max-height:400px; overflow:auto;",
@@ -699,7 +699,7 @@ server <- function(input, output, session) {
     })
 
     tagList(
-      h4("Acoustic_LPA sheets preview"),
+      h4("Acoustic sheets preview"),
       do.call(tabsetPanel, tabs),
       tags$hr()
     )
@@ -707,15 +707,15 @@ server <- function(input, output, session) {
 
   # One DTOutput per sheet
   observe({
-    req(rv$lpa_sheets)
-    sheets <- names(rv$lpa_sheets)
+    req(rv$acoustic_sheets)
+    sheets <- names(rv$acoustic_sheets)
     for (sheet in sheets) {
       local({
         nm <- sheet
         output_id <- paste0("tbl_", nm)
 
         output[[output_id]] <- renderDT({
-          df_sheet <- rv$lpa_sheets[[nm]]
+          df_sheet <- rv$acoustic_sheets[[nm]]
           req(!is.null(df_sheet))
           datatable(
             df_sheet,
@@ -728,15 +728,15 @@ server <- function(input, output, session) {
   })
 
   # -------------------------------------------------------------
-  # 2.4) Download Acoustic_LPA.xlsx (6 sheets)
+  # 2.4) Download Acoustic.xlsx (6 sheets)
   # -------------------------------------------------------------
-  output$dl_acoustic_lpa <- downloadHandler(
+  output$dl_acoustic_xlsx <- downloadHandler(
     filename = function() {
-      paste0("Acoustic_LPA.xlsx")
+      paste0("Acoustic.xlsx")
     },
     content = function(file) {
-      req(rv$lpa_sheets)
-      write_xlsx(rv$lpa_sheets, path = file)
+      req(rv$acoustic_sheets)
+      write_xlsx(rv$acoustic_sheets, path = file)
     }
   )
 }

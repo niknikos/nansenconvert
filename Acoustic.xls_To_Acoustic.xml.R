@@ -1,4 +1,4 @@
-# app.R - Acoustic_LPA.xlsx -> NMD Echosounder v1 XML
+# app.R - Acoustic.xlsx -> NMD Echosounder v1 XML
 
 # ---------------------------------------------------------------
 # 0) Initial configuration
@@ -36,7 +36,7 @@ xml_value_chr <- function(x) {
   s
 }
 
-# sheets: the six Acoustic_LPA sheets (root_metadata, distances, frequencies,
+# sheets: the six Acoustic sheets (root_metadata, distances, frequencies,
 # ch_types, sa_by_acocat, sa). on_progress(i, n) is called after each distance.
 build_echosounder_xml <- function(sheets, on_progress = function(i, n) NULL) {
   num <- function(x) suppressWarnings(as.numeric(x))
@@ -45,7 +45,7 @@ build_echosounder_xml <- function(sheets, on_progress = function(i, n) NULL) {
   ch_types_ord     <- sheets$ch_types     %>% arrange(num(distance_id), freq, type)
   sa_by_acocat_ord <- sheets$sa_by_acocat %>% arrange(num(distance_id), freq, type, acocat)
   sa_ord           <- sheets$sa           %>% arrange(num(distance_id), freq, type, acocat, ch)
-  # Older Acoustic_LPA files have no log_start column: fall back to distance_id
+  # Older Acoustic files have no log_start column: fall back to distance_id
   if (!"log_start" %in% names(distances_ord)) {
     distances_ord$log_start <- distances_ord$distance_id
   }
@@ -179,7 +179,7 @@ ui <- fluidPage(
             class = "card-body",
             fileInput(
               inputId = "excel_file",
-              label = tagList(fa("file-excel"), "Import Acoustic_LPA"),
+              label = tagList(fa("file-excel"), "Import Acoustic workbook (.xlsx)"),
               accept = c(".xlsx"),
               buttonLabel = "Browse…",
               placeholder = "Select an .xlsx file",
@@ -190,7 +190,7 @@ ui <- fluidPage(
               label = tagList(fa("fish"), "Biotic data for the trawl check (optional)"),
               accept = c(".xlsx", ".xml"),
               buttonLabel = "Browse…",
-              placeholder = "Biotic_LPA.xlsx or Biotic XML",
+              placeholder = "Biotic.xlsx or Biotic XML",
               width = "100%"
             ),
             fileInput(
@@ -452,7 +452,7 @@ server <- function(input, output, session) {
       # --- Phase 3: writing the file (20%) ---
       timing$write_start <- Sys.time()
       session$sendCustomMessage("update_progress", list(value = 95, detail = "Writing XML"))
-      file_name <- paste0("Acoustic_LPA_", format(Sys.time(), "%Y%m%d_%H%M%S"), ".xml")
+      file_name <- paste0("Acoustic_", format(Sys.time(), "%Y%m%d_%H%M%S"), ".xml")
       tmpfile <- file.path(tempdir(), file_name)
       write_xml(doc, file = tmpfile, encoding = "UTF-8")
       xml_path(tmpfile)
@@ -491,7 +491,7 @@ server <- function(input, output, session) {
       if (!is.null(xml_path())) {
         basename(xml_path())
       } else {
-        paste0("Acoustic_LPA", Sys.Date(), ".xml")
+        paste0("Acoustic_", Sys.Date(), ".xml")
       }
     },
     content = function(file) {
@@ -560,14 +560,14 @@ server <- function(input, output, session) {
 
   shownValidation <- reactiveVal(NULL)
   observeEvent(convertedValidation(), shownValidation(list(
-    what = if (is.null(xml_path())) "the Acoustic_LPA sheets (build the XML to add the schema check)" else "the Acoustic_LPA sheets and built XML",
+    what = if (is.null(xml_path())) "the Acoustic sheets (build the XML to add the schema check)" else "the Acoustic sheets and built XML",
     f = convertedValidation())))
   observeEvent(uploadedValidation(), shownValidation(list(
     what = paste("the uploaded file", input$aco_validate_xml$name), f = uploadedValidation())))
 
   output$aco_validation_summary <- renderUI({
     v <- shownValidation()
-    if (is.null(v)) return(p(class = "text-muted small", "Load an Acoustic_LPA workbook, or an existing Acoustic XML, to validate it."))
+    if (is.null(v)) return(p(class = "text-muted small", "Load an Acoustic workbook, or an existing Acoustic XML, to validate it."))
     tagList(
       p(class = "small mb-1", "Results for ", strong(v$what), ":"),
       findings_badges(v$f),

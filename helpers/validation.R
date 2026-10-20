@@ -2,7 +2,7 @@
 #
 # The Biotic checks follow the Nansen Biotic Explorer's QC (check ids,
 # thresholds and severities from its R/qc_functions.R and qc_thresholds.csv),
-# adapted to the four Biotic_LPA tables. Code checks use the active code
+# adapted to the four Biotic tables. Code checks use the active code
 # lists (Nansen or Custom); taxonomy checks use nansentaxonomy; positions on
 # land use nansencore's maritime zones. Schema validation uses the NMD
 # schemas bundled in schemas/, and the written XML is read back with
@@ -204,7 +204,7 @@ BIOTIC_CODE_FIELDS <- list(
                     lengthresolution = "lengthresolution", individualproducttype = "producttype")
 )
 
-#' Reads a Biotic XML (RstoxData) into the four Biotic_LPA tables
+#' Reads a Biotic XML (RstoxData) into the four Biotic tables
 biotic_tables_from_xml <- function(xml_path) {
   x <- RstoxData::readXmlFile(xml_path)
   to_chr <- function(d) { d <- as.data.frame(d); d[] <- lapply(d, function(v) as.character(v)); d }
@@ -448,7 +448,7 @@ validate_biotic <- function(tables, lists = NULL, th = VALIDATION_THRESHOLDS, ch
       tab <- table(names_cs[noaphia])
       fc$add("error", "taxonomy", "TAX_APHIA_MISSING", names(tab),
              sprintf("%d catch sample(s) without an aphia code (required by NMDBiotic).", as.integer(tab)),
-             "Match the species to the taxonomy in Catchsamples_LPA.")
+             "Match the species to the taxonomy in Catchsamples.")
     }
     u <- unique(names_cs[names_cs != ""])
     if (length(u)) {
@@ -487,7 +487,7 @@ validate_biotic <- function(tables, lists = NULL, th = VALIDATION_THRESHOLDS, ch
 # Acoustic
 # ---------------------------------------------------------------------------
 
-#' Reads an NMD Echosounder XML (RstoxData) into the six Acoustic_LPA sheets
+#' Reads an NMD Echosounder XML (RstoxData) into the six Acoustic sheets
 acoustic_sheets_from_xml <- function(xml_path) {
   x <- RstoxData::readXmlFile(xml_path)
   to_df <- function(d) as.data.frame(d, stringsAsFactors = FALSE)
@@ -504,7 +504,7 @@ acoustic_sheets_from_xml <- function(xml_path) {
        ch_types = ct, sa_by_acocat = sb, sa = sa)
 }
 
-#' All Acoustic checks on the six Acoustic_LPA sheets. biotic (optional) is
+#' All Acoustic checks on the six Acoustic sheets. biotic (optional) is
 #' the four Biotic tables, used to check that each acoustic category has
 #' trawl samples; acocat_level is passed to the Nansen acocat mapping.
 validate_acoustic <- function(sheets, lists = NULL, biotic = NULL, th = VALIDATION_THRESHOLDS,
