@@ -124,7 +124,7 @@ build_echosounder_xml <- function(sheets, on_progress = function(i, n) NULL) {
 # 2) User interface
 # ---------------------------------------------------------------
 ui <- fluidPage(
-  title = "Acoustic_XML_Editor",
+  title = "Acoustic.xls → Acoustic.xml converter",
   theme = bslib::bs_theme(
     version = 5,
     bg = "#f8f9fa",
@@ -156,7 +156,7 @@ ui <- fluidPage(
         class = "d-flex justify-content-between align-items-center",
         h1(
           class = "mb-0 fs-4 fw-bold",
-          span(fa("file-code", fill = "white"), " Acoustic_XML_Editor")
+          span(fa("file-code", fill = "white"), " Acoustic.xls → Acoustic.xml converter")
         ),
         div(id = "progress-header", style = "width: 40%;")
       )
@@ -473,7 +473,8 @@ server <- function(input, output, session) {
           "- Data preparation: ", round(perf$preparation, 2), " s\n",
           "- XML construction: ", round(perf$xml, 2), " s\n",
           "- Writing the file: ", round(perf$writing, 2), " s\n\n",
-          "File created: ", xml_path()
+          # The file name only: the server's temporary folder means nothing to the user
+          "Ready to export: ", basename(xml_path())
         )
       })
     }, error = function(e) {

@@ -38,7 +38,12 @@ tibble, readr, later, worrms, RstoxData, and the EAF-Nansen libraries
 - `helpers/` — code lists, taxonomy (nansentaxonomy) and validation
 - `schemas/` — the NMD XML schemas used for validation
 - `data/` — synthetic templates, rebuilt by `data-raw/make_synthetic_templates.R`
+- `docs/` — the user guide: `User_Guide.qmd` is the source of the `User_Guide.pdf`
+  the app serves; render it with `quarto render docs/User_Guide.qmd`
 - `tests/` — testthat suite: `Rscript tests/run_tests.R`
+- `tests/browser_e2e.R` — runs the templates through every tab in headless Chrome
+  and checks the downloads; with `--screenshots docs/img` it also refreshes the
+  guide's screenshots
 
 ## Status
 

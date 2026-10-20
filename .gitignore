@@ -3,3 +3,4 @@
 .RData
 .Ruserdata
 .claude/settings.local.json
+docs/.quarto/
