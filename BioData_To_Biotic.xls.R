@@ -1,4 +1,4 @@
-# app.R — Combined Shiny application for Fishstations_LPA, Catchsamples_LPA, Individuals_LPA, Biotic_LPA
+# app.R — Combined Shiny application for Fishstations, Catchsamples, Individuals, Biotic
 # Each part of the workflow is a separate Shiny module
 
 # --- 0. Packages ---
@@ -550,7 +550,7 @@ station_dist_nmi <- function(lat1, lon1, lat2, lon2) {
 }
 
 #' Station values that are not in the stations file (editable in the
-#' Fishstations_LPA tab). Codes come from the active code lists.
+#' Fishstations tab). Codes come from the active code lists.
 STATION_DEFAULTS <- list(
   nation               = "",
   area                 = "",
@@ -595,12 +595,12 @@ theme_modern <- bs_theme(
   "font-size-base" = "1.05rem"
 )
 
-# --- 2. MODULE 1: Fishstations_LPA ---
+# --- 2. MODULE 1: Fishstations ---
 mod_fishstations_ui <- function(id) {
   ns <- NS(id)
   fluidPage(
     titlePanel(
-      tagList(icon("location-dot", class="me-2"), "Fishstations_LPA")
+      tagList(icon("location-dot", class="me-2"), "Fishstations")
     ),
     fluidRow(
       column(4,
@@ -612,9 +612,9 @@ mod_fishstations_ui <- function(id) {
             br(),
             actionButton(ns("injectMetadata"), label = tagList(icon("syringe"), "3. Add metadata to the stations file"), class = "btn btn-secondary", style = "width: 100%;"),
             br(), br(),
-            downloadButton(ns("downloadStations"), label = tagList(icon("download"), "4. Download Fishstations_LPA"), class = "btn btn-secondary", style = "width: 100%;"),
+            downloadButton(ns("downloadStations"), label = tagList(icon("download"), "4. Download Fishstations"), class = "btn btn-secondary", style = "width: 100%;"),
             br(), br(),
-            downloadButton(ns("downloadMetadataXML"), label = tagList(icon("download"), "5. Download Missions_LPA"), class = "btn btn-primary", style = "width: 100%;"),
+            downloadButton(ns("downloadMetadataXML"), label = tagList(icon("download"), "5. Download Missions"), class = "btn btn-primary", style = "width: 100%;"),
             hr(),
             tags$h5(icon("sliders"), strong("Station defaults")),
             helpText("Applied to every station. Leave a field empty to omit it from the XML."),
@@ -631,7 +631,7 @@ mod_fishstations_ui <- function(id) {
       column(8,
         div(class = "card-container",
             uiOutput(ns("fileError")),
-            div(tags$h4(icon("table"), "Fishstations_LPA sheets preview"),
+            div(tags$h4(icon("table"), "Fishstations sheets preview"),
                 style = "margin-top: 8px; margin-bottom: 12px;"),
             tabsetPanel(
               id = ns("fs_preview_tabs"),
@@ -877,21 +877,21 @@ mod_fishstations_server <- function(id) {
       )
     })
     output$downloadStations <- downloadHandler(
-      filename = function() "Fishstations_LPA.xlsx",
+      filename = function() "Fishstations.xlsx",
       content = function(file) write_xlsx(stationsData(), file)
     )
     output$downloadMetadataXML <- downloadHandler(
-      filename = function() "Missions_LPA.xlsx",
+      filename = function() "Missions.xlsx",
       content = function(file) write_xlsx(metadataDF(), file)
     )
   })
 }
 
-# --- 3. MODULE 2: Catchsamples_LPA ---
+# --- 3. MODULE 2: Catchsamples ---
 mod_catchsamples_ui <- function(id) {
   ns <- NS(id)
   fluidPage(
-    titlePanel(tagList(icon("ship", class = "me-2"), "Catchsamples_LPA")),
+    titlePanel(tagList(icon("ship", class = "me-2"), "Catchsamples")),
     sidebarLayout(
       sidebarPanel(width = 4,
                    div(class = "card mb-4",
@@ -911,7 +911,7 @@ mod_catchsamples_ui <- function(id) {
                        div(class = "card-header h5 bg-success text-white", icon("file-export", class = "me-2"), "2. Export results"),
                        div(class = "card-body",
                            downloadButton(ns("downloadData"), "📄 Download the edited catches sheet", class = "btn-primary mb-2", style = "width: 100%;"),
-                           downloadButton(ns("downloadCatchsamples"), "📦 Download Catchsamples_LPA", class = "btn-success", style = "width: 100%;"),
+                           downloadButton(ns("downloadCatchsamples"), "📦 Download Catchsamples", class = "btn-success", style = "width: 100%;"),
                            uiOutput(ns("worms_session_ui"))
                        )
                    )
@@ -1049,7 +1049,7 @@ mod_catchsamples_server <- function(id) {
           }
           showModal(
             modalDialog(
-              title = "Species not in the taxonomy — Catchsamples_LPA",
+              title = "Species not in the taxonomy — Catchsamples",
               p(
                 "Some species are not in the EAF-Nansen taxonomy (nansentaxonomy). Type the start of a ",
                 tags$em("scientificname"), " below to filter the list; likely typos are pre-selected.",
@@ -1391,7 +1391,7 @@ mod_catchsamples_server <- function(id) {
       }
     )
     output$downloadCatchsamples <- downloadHandler(
-      filename = function() { "Catchsamples_LPA.xlsx" },
+      filename = function() { "Catchsamples.xlsx" },
       content = function(file) {
         csd <- tryCatch(catchSamplesData(), error = function(e) NULL)
         if (is.null(csd) || !nrow(csd)) {
@@ -1403,7 +1403,7 @@ mod_catchsamples_server <- function(id) {
   })
 }
 
-# --- 4. MODULE 3: Individuals_LPA ---
+# --- 4. MODULE 3: Individuals ---
 INDIV_FQ_REQUIRED <- c("station", "nombre", "poids_mens", "espece", "taille_cm")
 INDIV_FQ_LABELS <- c(
   station    = "station",
@@ -1474,20 +1474,20 @@ mod_individuals_ui <- function(id) {
       title = div(
         class = "d-flex align-items-center gap-2",
         icon("fish"),
-        span("Individuals LPA — import, join and export", class = "fw-semibold")
+        span("Individuals — import, join and export", class = "fw-semibold")
       )
     ),
     layout_sidebar(
       sidebar = sidebar(
         width = 340,
-        class = "indiv-lpa-sidebar",
+        class = "indiv-sidebar",
         h5("Excel files"),
         uiOutput(ns("indiv_worms_badge")),
         fileInput(ns("fq_file"),  "Import Length frequency file (.xlsx / .xls)", accept = c(".xlsx", ".xls"), buttonLabel = "Browse…"),
         fileInput(ns("bio_file"), "Import Biology file (.xlsx / .xls)",           accept = c(".xlsx", ".xls"), buttonLabel = "Browse…"),
         tags$style(HTML(
-          ".indiv-lpa-sidebar { overflow-y: auto !important; max-height: calc(100vh - 120px); }
-           .indiv-lpa-sidebar .form-group { margin-bottom: .5rem; }
+          ".indiv-sidebar { overflow-y: auto !important; max-height: calc(100vh - 120px); }
+           .indiv-sidebar .form-group { margin-bottom: .5rem; }
            .indiv-actions { display:flex; flex-direction:column; gap:.4rem; margin-top:.25rem; margin-bottom:.5rem; }
            .indiv-actions .btn { margin:0 !important; }"
         )),
@@ -1498,7 +1498,7 @@ mod_individuals_ui <- function(id) {
         helpText("Sex and maturation stage are translated with the Sex and Maturation stage code lists."),
         div(class = "indiv-actions",
           actionButton(ns("btn_join"), "Join Biology with Length", class = "btn-primary w-100", icon = icon("link")),
-          downloadButton(ns("dl_individuals"), "Export Individuals_LPA.xlsx", class = "btn-success w-100")
+          downloadButton(ns("dl_individuals"), "Export Individuals.xlsx", class = "btn-success w-100")
         ),
         hr(style = "margin:.5rem 0;"),
         helpText(
@@ -1508,7 +1508,7 @@ mod_individuals_ui <- function(id) {
         helpText("Export: the transformations are applied to the joined rows (see the preview).")
       ),
       div(
-        h4(icon("table"), "Individuals_LPA sheets preview"),
+        h4(icon("table"), "Individuals sheets preview"),
         tabsetPanel(
           id = ns("indiv_preview_tabs"),
           tabPanel(
@@ -1535,7 +1535,7 @@ mod_individuals_ui <- function(id) {
                 tableOutput(ns("preview_joined")))
           ),
           tabPanel(
-            "Export Individuals_LPA.xlsx",
+            "Export Individuals.xlsx",
             p("Preview of the exported columns (first 10 rows):", class = "text-muted small"),
             div(class = "table-responsive",
                 style = "max-height:500px; overflow:auto;",
@@ -2311,7 +2311,7 @@ mod_individuals_server <- function(id) {
     }, striped = TRUE)
 
     output$dl_individuals <- downloadHandler(
-      filename = function() "Individuals_LPA.xlsx",
+      filename = function() "Individuals.xlsx",
       content  = function(file) {
         if (is.null(rv$joined) || nrow(rv$joined) == 0) {
           stop("No joined data to export. Check the join.")
@@ -2323,28 +2323,28 @@ mod_individuals_server <- function(id) {
 }
 
 
-# --- 5. MODULE 4: Biotic_LPA ---
+# --- 5. MODULE 4: Biotic ---
 mod_biotic_ui <- function(id) {
   ns <- NS(id)
   fluidPage(
-    titlePanel(tagList(icon("database", class = "me-2"), "Biotic_LPA")),
+    titlePanel(tagList(icon("database", class = "me-2"), "Biotic")),
     sidebarLayout(
       sidebarPanel(
-        fileInput(ns("in_missions"), "Missions_LPA.xlsx",     accept = ".xlsx", buttonLabel = "Browse…"),
-        fileInput(ns("in_fish"),     "Fishstations_LPA.xlsx",  accept = ".xlsx", buttonLabel = "Browse…"),
-        fileInput(ns("in_catch"),    "Catchsamples_LPA.xlsx",  accept = ".xlsx", buttonLabel = "Browse…"),
-        fileInput(ns("in_indiv"),    "Individuals_LPA.xlsx",   accept = ".xlsx", buttonLabel = "Browse…"),
+        fileInput(ns("in_missions"), "Missions.xlsx",     accept = ".xlsx", buttonLabel = "Browse…"),
+        fileInput(ns("in_fish"),     "Fishstations.xlsx",  accept = ".xlsx", buttonLabel = "Browse…"),
+        fileInput(ns("in_catch"),    "Catchsamples.xlsx",  accept = ".xlsx", buttonLabel = "Browse…"),
+        fileInput(ns("in_indiv"),    "Individuals.xlsx",   accept = ".xlsx", buttonLabel = "Browse…"),
         h6("Length sample defaults"),
         helpText("Written for catch samples that have measured fish."),
         code_select_input(ns("bs_sampletype"), "sampletype", "sampletype", "20"),
         code_select_input(ns("bs_lengthmeasurement"), "lengthmeasurement", "lengthmeasurement", "E"),
         code_select_input(ns("bs_sampleproducttype"), "sampleproducttype", "producttype", "1"),
         actionButton(ns("process"), "Combine the data", class = "btn-primary w-100 mb-2"),
-        downloadButton(ns("download_biotic"), "Download Biotic_LPA", class = "btn-success w-100"),
+        downloadButton(ns("download_biotic"), "Download Biotic", class = "btn-success w-100"),
         width = 3
       ),
       mainPanel(
-        h4(icon("table"), "Biotic_LPA input files preview (first 5 rows)"),
+        h4(icon("table"), "Biotic input files preview (first 5 rows)"),
         tabsetPanel(
           id = ns("biotic_preview_tabs"),
           tabPanel(
@@ -2512,7 +2512,7 @@ mod_biotic_server <- function(id) {
     output$tbl_catch    <- renderDT({ req(data_in()); datatable(data_in()$catchesamples) })
     output$tbl_indiv    <- renderDT({ req(data_in()); datatable(data_in()$individuals) })
     output$download_biotic <- downloadHandler(
-      filename = function(){"Biotic_LPA.xlsx"},
+      filename = function(){"Biotic.xlsx"},
       content = function(file){
         dfs <- data_in()
         # Matches Bioltic_valide_model.xlsx exactly: every column is written
@@ -2556,12 +2556,12 @@ ui <- tagList(
     )
   ),
   navbarPage(
-  title = div(icon("database"), "LPA_Data_To_Biotic-Format"),
+  title = div(icon("database"), "Field data → Biotic workbook"),
   theme = theme_modern,
-  tabPanel(tagList(icon("location-dot"),   "Fishstations_LPA"), mod_fishstations_ui("fish")),
-  tabPanel(tagList(icon("ship"),           "Catchsamples_LPA"), mod_catchsamples_ui("catch")),
-  tabPanel(tagList(icon("fish"),           "Individuals_LPA"),  mod_individuals_ui("indiv")),
-  tabPanel(tagList(icon("database"),       "Biotic_LPA"),       mod_biotic_ui("biotic"))
+  tabPanel(tagList(icon("location-dot"),   "Fishstations"), mod_fishstations_ui("fish")),
+  tabPanel(tagList(icon("ship"),           "Catchsamples"), mod_catchsamples_ui("catch")),
+  tabPanel(tagList(icon("fish"),           "Individuals"),  mod_individuals_ui("indiv")),
+  tabPanel(tagList(icon("database"),       "Biotic"),       mod_biotic_ui("biotic"))
   )
 )
 

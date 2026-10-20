@@ -3,11 +3,19 @@
 # code_lists_get()) so every converter reads the same lists. Custom lists are
 # saved on this computer through the EAF-Nansen tool-suite state directory.
 
-CODE_LISTS_STATE_APP <- "excelxmlconverter"
+CODE_LISTS_STATE_APP <- "nansenconvert"
+# Name the app used before it was renamed; lists saved under it are moved over
+CODE_LISTS_STATE_APP_OLD <- "excelxmlconverter"
 
 code_lists_state_path <- function() {
-  tryCatch(nansencore::toolsuite_state_file(CODE_LISTS_STATE_APP, "code_lists.csv"),
-           error = function(e) NA_character_)
+  path <- tryCatch(nansencore::toolsuite_state_file(CODE_LISTS_STATE_APP, "code_lists.csv"),
+                   error = function(e) NA_character_)
+  if (!is.na(path) && !file.exists(path)) {
+    old <- tryCatch(nansencore::toolsuite_state_file(CODE_LISTS_STATE_APP_OLD, "code_lists.csv", create = FALSE),
+                    error = function(e) NA_character_)
+    if (!is.na(old) && file.exists(old)) file.copy(old, path)
+  }
+  path
 }
 
 code_lists_ui <- function(id) {

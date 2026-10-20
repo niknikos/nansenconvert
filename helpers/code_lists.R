@@ -127,8 +127,8 @@ CODE_LIST_DEFS <- data.frame(
     "Station defaults",
     "Station defaults",
     "Station defaults",
-    "Biotic_LPA sample defaults",
-    "Biotic_LPA sample defaults",
+    "Biotic sample defaults",
+    "Biotic sample defaults",
     "Catch sample defaults",
     "Catch, sample and individual product type",
     "Individuals"
@@ -268,7 +268,7 @@ length_resolution_cm <- function(code, lists = NULL) {
   as.numeric(m[2]) / if (m[3] == "mm") 10 else 1
 }
 
-#' acocat mapping in the form build_lpa_from_nasc_staged() takes
+#' acocat mapping in the form build_acoustic_sheets() takes
 acocat_map_for <- function(names, lists = NULL, acocat_level = "specific") {
   if (code_list_mode("acocat", lists) == "nansen") return(acocat_nansen(names, acocat_level))
   tab <- code_list_table("acocat", lists)
