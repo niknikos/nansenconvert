@@ -1,4 +1,4 @@
-# The Nansis2Biotic.xml tab. rnansisclient talks to a live NansIS database, so
+# The Nansis2Biotic.xml tab. rnansisclient talks to a live Nansis database, so
 # its database functions are replaced by fakes (as rnansisclient's own tests
 # do); the fake export writes the synthetic Biotic.xml, which the tab then
 # validates, offers for download and zips for real.
