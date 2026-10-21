@@ -36,7 +36,8 @@ b <- chromote::ChromoteSession$new(width = 1400, height = 900)
 on.exit(b$close(), add = TRUE)
 
 js <- function(expr) {
-  r <- b$Runtime$evaluate(expr, awaitPromise = TRUE, returnByValue = TRUE)
+  # 30 s rather than chromote's 10 s: a busy machine can stall a single call
+  r <- b$Runtime$evaluate(expr, awaitPromise = TRUE, returnByValue = TRUE, timeout_ = 30)
   if (!is.null(r$exceptionDetails)) stop("JS error in: ", expr, "\n", r$exceptionDetails$exception$description)
   r$result$value
 }

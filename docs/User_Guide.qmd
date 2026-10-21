@@ -266,9 +266,9 @@ itself is done by **rnansisclient**, the EAF-Nansen tool that replaced the old J
 client, so the files are the same as from its own app; this tab adds nansenconvert's
 validation to every file.
 
-1. **Connect to NansIS.** Choose or type the host (for example `postgres9.imr.no`, or
-   `localhost` for a copy on your computer), the port and database name, and your
-   username and password. The password is only used to open the connection and is
+1. **Connect to NansIS.** Type the name of your NansIS server (your database
+   administrator can give it to you), or choose `localhost` for a copy on your
+   computer. Then fill in the port and database name, and your username and password. The password is only used to open the connection and is
    cleared from the form straight away; it is never saved.
 2. **Choose surveys.** Set the vessel type digit (4 is the Dr. Fridtjof Nansen; other
    vessel types are not fully supported by rnansisclient yet), optionally pick
@@ -424,7 +424,7 @@ the Nansen codes everywhere it is used.
 
 **"Connection failed" in the NansIS tab.** Check the host, port, database name,
 username and password. The message gives the database server's reason; a server inside
-the IMR network may only be reachable from there or over VPN.
+an institute's network may only be reachable from there or over VPN.
 
 # Validation checks {#sec-checks}
 

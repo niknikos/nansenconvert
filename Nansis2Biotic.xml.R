@@ -10,7 +10,8 @@ if (!exists("validate_biotic_xml_file", mode = "function")) {
   for (h in file.path("helpers", c("code_lists.R", "taxonomy.R", "validation.R"))) source(h, local = TRUE)
 }
 
-NANSIS_HOSTS <- c("postgres9.imr.no", "localhost")
+# Servers are typed by the user; only a copy on this computer is offered
+NANSIS_HOSTS <- c("localhost")
 
 have_rnansisclient <- function() requireNamespace("rnansisclient", quietly = TRUE)
 
@@ -66,7 +67,7 @@ nansis2biotic_ui <- function(id) {
         nansis_card("1. Connect to NansIS",
           # Starts empty: selectize would otherwise pick the first host by itself
           selectizeInput(ns("host"), "Host", choices = NANSIS_HOSTS, selected = character(0),
-                         options = list(create = TRUE, placeholder = "Choose or type a host",
+                         options = list(create = TRUE, placeholder = "Server name or localhost",
                                         onInitialize = I("function() { this.setValue(''); }"))),
           fluidRow(
             column(5, numericInput(ns("port"), "Port", value = 5432, min = 1, max = 65535)),
