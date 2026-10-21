@@ -552,14 +552,7 @@ server <- function(input, output, session) {
     req(input$xmlValidateFile)
     p <- input$xmlValidateFile$datapath
     withProgress(message = "Validating the uploaded XML...", value = 0.3, {
-      f_schema <- validate_xml_schema(p, "biotic")
-      tabs <- tryCatch(biotic_tables_from_xml(p), error = function(e) e)
-      if (inherits(tabs, "error")) {
-        fc <- findings_collector()
-        fc$add("error", "read-back", "READBACK_FAILED", "file", paste("StoX's reader could not read the file:", conditionMessage(tabs)))
-        return(rbind(fc$get(), f_schema))
-      }
-      rbind(validate_biotic(tabs, cl$lists), f_schema)
+      validate_biotic_xml_file(p, cl$lists)
     })
   })
 

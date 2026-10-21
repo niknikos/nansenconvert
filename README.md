@@ -8,6 +8,7 @@ acoustic NASC. Part of the EAF-Nansen tool suite.
 |---|---|
 | BioData_To_Biotic.xls | Stations, catches, length-frequency and biology sheets → `Biotic.xlsx` |
 | Biotic.xls_To_Biotic.xml | `Biotic.xlsx` → `Biotic.xml` (NMDBiotic v3.1) |
+| Nansis2Biotic.xml | NansIS database → `Biotic.xml`, with rnansisclient's export and integrity checks |
 | NASC.xls_To_Acoustic.xml | Echoview NASC export → `Acoustic.xlsx` |
 | Acoustic.xls_To_Acoustic.xml | `Acoustic.xlsx` → Acoustic XML (NMD Echosounder v1) |
 | Code lists | Nansen (NMD reference) or custom code lists for every coded field |
@@ -29,12 +30,14 @@ Packages: shiny, bslib, shinyjs, readxl, writexl, dplyr, lubridate, DT, xml2,
 purrr, fontawesome, rhandsontable, stringi, shinycssloaders, shinyalert,
 tibble, readr, later, worrms, RstoxData, and the EAF-Nansen libraries
 **nansencore** and **nansentaxonomy** (from
-<https://git.imr.no/cdcf/nansen-toolsuite>).
+<https://git.imr.no/cdcf/nansen-toolsuite>). The Nansis2Biotic.xml tab also
+needs **rnansisclient** (same place) and RPostgres; without them the other
+tabs work as usual.
 
 ## Layout
 
 - `app.R` — combines the converters into one app
-- `*.R` in the root — the four converters
+- `*.R` in the root — the five converters
 - `helpers/` — code lists, taxonomy (nansentaxonomy) and validation
 - `schemas/` — the NMD XML schemas used for validation
 - `data/` — synthetic templates, rebuilt by `data-raw/make_synthetic_templates.R`
