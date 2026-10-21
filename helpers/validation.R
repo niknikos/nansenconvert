@@ -213,7 +213,7 @@ biotic_tables_from_xml <- function(xml_path) {
 }
 
 #' All checks on an existing Biotic XML file: the schema, StoX's reader and
-#' the data checks. Used for uploaded files and for NansIS exports.
+#' the data checks. Used for uploaded files and for Nansis exports.
 validate_biotic_xml_file <- function(xml_path, lists = NULL) {
   f_schema <- validate_xml_schema(xml_path, "biotic")
   fc <- findings_collector()

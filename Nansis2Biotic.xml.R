@@ -1,4 +1,4 @@
-# app.R - NansIS database -> NMDBiotic v3.1 XML
+# app.R - Nansis database -> NMDBiotic v3.1 XML
 # The export itself is rnansisclient's (EAF-Nansen tool suite): this tab adds
 # the connection, the choice of surveys and the downloads, and runs the same
 # validation as the Biotic XML tab on every exported file.
@@ -10,7 +10,8 @@ if (!exists("validate_biotic_xml_file", mode = "function")) {
   for (h in file.path("helpers", c("code_lists.R", "taxonomy.R", "validation.R"))) source(h, local = TRUE)
 }
 
-NANSIS_HOSTS <- c("postgres9.imr.no", "localhost")
+# Servers are typed by the user; only a copy on this computer is offered
+NANSIS_HOSTS <- c("localhost")
 
 have_rnansisclient <- function() requireNamespace("rnansisclient", quietly = TRUE)
 
@@ -54,7 +55,7 @@ nansis2biotic_ui <- function(id) {
   ns <- NS(id)
   fluidPage(
     useShinyjs(),
-    titlePanel("NansIS → Biotic.xml converter"),
+    titlePanel("Nansis → Biotic.xml converter"),
     if (!have_rnansisclient()) {
       div(class = "alert alert-warning",
           strong("This tab needs the rnansisclient package"), " (EAF-Nansen tool suite). Install it with ",
@@ -63,10 +64,10 @@ nansis2biotic_ui <- function(id) {
     },
     fluidRow(
       column(4,
-        nansis_card("1. Connect to NansIS",
+        nansis_card("1. Connect to Nansis",
           # Starts empty: selectize would otherwise pick the first host by itself
           selectizeInput(ns("host"), "Host", choices = NANSIS_HOSTS, selected = character(0),
-                         options = list(create = TRUE, placeholder = "Choose or type a host",
+                         options = list(create = TRUE, placeholder = "Server name or localhost",
                                         onInitialize = I("function() { this.setValue(''); }"))),
           fluidRow(
             column(5, numericInput(ns("port"), "Port", value = 5432, min = 1, max = 65535)),
@@ -133,7 +134,7 @@ nansis2biotic_ui <- function(id) {
           tabPanel("Integrity", value = "integrity",
             br(),
             p(class = "text-muted small",
-              "Checks the NansIS data itself for the surveys chosen in step 2. Read-only: it never changes the",
+              "Checks the Nansis data itself for the surveys chosen in step 2. Read-only: it never changes the",
               "database, and its correction script is a dry run that ends in ROLLBACK."),
             checkboxGroupInput(ns("integrity_checks"), "Checks to run",
                                choices = if (have_rnansisclient()) {
@@ -207,7 +208,7 @@ nansis2biotic_server <- function(id) {
     # --- 2. Surveys ---------------------------------------------------------
     observeEvent(input$load_inventory, {
       if (!connected()) {
-        showNotification("Connect to NansIS first.", type = "warning")
+        showNotification("Connect to Nansis first.", type = "warning")
         return()
       }
       inv <- tryCatch(withProgress(message = "Loading the survey inventory…", value = 0.5,
@@ -270,7 +271,7 @@ nansis2biotic_server <- function(id) {
     # --- 3. Export and validation ------------------------------------------
     observeEvent(input$export, {
       if (!connected()) {
-        showNotification("Connect to NansIS first.", type = "warning")
+        showNotification("Connect to Nansis first.", type = "warning")
         return()
       }
       surveys <- chosen_surveys()
@@ -283,7 +284,7 @@ nansis2biotic_server <- function(id) {
       dir.create(out_dir, recursive = TRUE, showWarnings = FALSE)
       lists <- cl$lists
       res <- list()
-      withProgress(message = "Exporting from NansIS", value = 0, {
+      withProgress(message = "Exporting from Nansis", value = 0, {
         for (i in seq_along(surveys)) {
           s <- surveys[i]
           incProgress(1 / length(surveys), detail = sprintf("survey %s (%d of %d)", s, i, length(surveys)))
@@ -310,7 +311,7 @@ nansis2biotic_server <- function(id) {
         num <- function(v) if (is.null(v)) NA_integer_ else as.integer(v)
         data.frame(Survey = x$survey, Exported = if (isTRUE(r$success)) "Yes" else "No",
                    Stations = num(r$stations_exported), `Catch samples` = num(r$catchsamples_exported),
-                   Individuals = num(r$individuals_exported), `NansIS warnings` = num(r$warning_count),
+                   Individuals = num(r$individuals_exported), `Nansis warnings` = num(r$warning_count),
                    Errors = n[["error"]], Warnings = n[["warning"]], Notes = n[["info"]],
                    check.names = FALSE, stringsAsFactors = FALSE)
       }))
@@ -368,7 +369,7 @@ nansis2biotic_server <- function(id) {
       contentType = "application/xml"
     )
     output$download_zip <- downloadHandler(
-      filename = function() format(Sys.time(), "NansIS_Biotic_%Y%m%d_%H%M.zip"),
+      filename = function() format(Sys.time(), "Nansis_Biotic_%Y%m%d_%H%M.zip"),
       content = function(file) {
         req(rv$results, rv$out_dir)
         for (x in rv$results) {
@@ -407,7 +408,7 @@ nansis2biotic_server <- function(id) {
     # --- Integrity check ----------------------------------------------------
     observeEvent(input$run_integrity, {
       if (!connected()) {
-        showNotification("Connect to NansIS first.", type = "warning")
+        showNotification("Connect to Nansis first.", type = "warning")
         return()
       }
       surveys <- chosen_surveys()
@@ -420,7 +421,7 @@ nansis2biotic_server <- function(id) {
         return()
       }
       dir <- file.path(work_dir, format(Sys.time(), "integrity_%Y%m%d_%H%M%S"))
-      res <- tryCatch(withProgress(message = "Checking the NansIS data…", value = 0.3, {
+      res <- tryCatch(withProgress(message = "Checking the Nansis data…", value = 0.3, {
         r <- rnansisclient::run_integrity_checks(rv$con, surveys = surveys, vessel_type = input$vessel_type,
                                                  checks = input$integrity_checks)
         incProgress(0.5, detail = "writing the report")
@@ -467,7 +468,7 @@ nansis2biotic_server <- function(id) {
     })
     observe(shinyjs::toggleState("download_integrity", condition = !is.null(rv$integrity)))
     output$download_integrity <- downloadHandler(
-      filename = function() format(Sys.time(), "NansIS_integrity_%Y%m%d_%H%M.zip"),
+      filename = function() format(Sys.time(), "Nansis_integrity_%Y%m%d_%H%M.zip"),
       content = function(file) {
         req(rv$integrity_dir)
         nansis_zip(file, list.files(rv$integrity_dir, full.names = TRUE))

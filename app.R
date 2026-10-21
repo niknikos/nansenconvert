@@ -133,7 +133,7 @@ splash_ui <- tags$div(
       tags$div(tags$b("Biotic.xlsx"), " → Biotic.xml"),
       tags$div(tags$b("NASC"), " → Acoustic.xlsx"),
       tags$div(tags$b("Acoustic.xlsx"), " → Acoustic.xml"),
-      tags$div(tags$b("NansIS database"), " → Biotic.xml")
+      tags$div(tags$b("Nansis database"), " → Biotic.xml")
     ),
     actionButton("btn_launch_app", "\U0001F680 Launch the application", class = "btn"),
     tags$p(class = "splash-desc", style = "margin: 22px 0 0 0; font-size: 0.82rem; opacity: 0.75;",

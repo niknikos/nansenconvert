@@ -36,7 +36,8 @@ b <- chromote::ChromoteSession$new(width = 1400, height = 900)
 on.exit(b$close(), add = TRUE)
 
 js <- function(expr) {
-  r <- b$Runtime$evaluate(expr, awaitPromise = TRUE, returnByValue = TRUE)
+  # 30 s rather than chromote's 10 s: a busy machine can stall a single call
+  r <- b$Runtime$evaluate(expr, awaitPromise = TRUE, returnByValue = TRUE, timeout_ = 30)
   if (!is.null(r$exceptionDetails)) stop("JS error in: ", expr, "\n", r$exceptionDetails$exception$description)
   r$result$value
 }
@@ -211,19 +212,19 @@ rb <- readback_xml(f_bxml, "biotic")
 check("Biotic.xml reads back with RstoxData", !any(rb$severity == "error"),
       paste(unique(rb$message), collapse = "; "))
 
-# --- NansIS → Biotic.xml -----------------------------------------------------
-# Only the tab itself: a real export needs a NansIS database and its login
-cat("NansIS → Biotic.xml\n")
+# --- Nansis → Biotic.xml -----------------------------------------------------
+# Only the tab itself: a real export needs a Nansis database and its login
+cat("Nansis → Biotic.xml\n")
 tab("Nansis2Biotic.xml")
 n_regions <- js("Object.keys(($('#nansis-regions')[0] || {}).selectize ? $('#nansis-regions')[0].selectize.options : {}).length")
 n_checks <- js("document.querySelectorAll('#nansis-integrity_checks input[type=checkbox]').length")
-check("NansIS tab lists regions and integrity checks", n_regions > 0 && n_checks > 0,
+check("Nansis tab lists regions and integrity checks", n_regions > 0 && n_checks > 0,
       sprintf("%d regions, %d checks", n_regions, n_checks))
 # The host must start empty, so this click cannot reach any database
 host <- js("$('#nansis-host')[0].selectize.getValue()")
-check("NansIS tab starts with no host chosen", identical(host, ""), sprintf("host '%s'", host))
+check("Nansis tab starts with no host chosen", identical(host, ""), sprintf("host '%s'", host))
 if (identical(host, "")) click("nansis-connect")
-check("NansIS tab asks for a host before connecting", grepl("host", text_of("nansis-connection_status")))
+check("Nansis tab asks for a host before connecting", grepl("host", text_of("nansis-connection_status")))
 shot("nansis.png")
 
 # --- NASC → Acoustic workbook ------------------------------------------------

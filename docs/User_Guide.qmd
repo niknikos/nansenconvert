@@ -66,13 +66,13 @@ Nansen Converter turns survey data into the two NMD XML formats that StoX reads:
 **NMDBiotic v3.1** for trawl stations, catches and individual fish, and **NMD Echosounder
 v1** for acoustic NASC. Field data and NASC exports take two steps, with an Excel
 workbook in between that you can check and correct before the XML is written. Surveys
-stored in a NansIS database go straight to `Biotic.xml`.
+stored in a Nansis database go straight to `Biotic.xml`.
 
 | Tab | Input | Output |
 |---|---|---|
 | BioData_To_Biotic.xls | Stations, catches, length-frequency and biology sheets | `Biotic.xlsx` |
 | Biotic.xls_To_Biotic.xml | `Biotic.xlsx` | `Biotic.xml` |
-| Nansis2Biotic.xml | A NansIS database | `Biotic_<survey>.xml` |
+| Nansis2Biotic.xml | A Nansis database | `Biotic_<survey>.xml` |
 | NASC.xls_To_Acoustic.xml | Echoview NASC export | `Acoustic.xlsx` |
 | Acoustic.xls_To_Acoustic.xml | `Acoustic.xlsx` | `Acoustic_<date-time>.xml` |
 
@@ -256,19 +256,19 @@ missing aphia code. Warnings are values worth checking, such as a station on lan
 fish far too heavy for its length. Notes are for information. All checks are listed in
 @sec-checks.
 
-# NansIS database → Biotic.xml {#sec-nansis}
+# Nansis database → Biotic.xml {#sec-nansis}
 
 ![The Nansis2Biotic.xml tab before connecting](img/nansis.png){#fig-nansis width=100%}
 
-Some countries keep their national survey data in NansIS. The **Nansis2Biotic.xml** tab
-exports those surveys straight from the NansIS database to NMDBiotic v3.1. The export
-itself is done by **rnansisclient**, the EAF-Nansen tool that replaced the old Java NansIS
+Some countries keep their national survey data in Nansis. The **Nansis2Biotic.xml** tab
+exports those surveys straight from the Nansis database to NMDBiotic v3.1. The export
+itself is done by **rnansisclient**, the EAF-Nansen tool that replaced the old Java Nansis
 client, so the files are the same as from its own app; this tab adds nansenconvert's
 validation to every file.
 
-1. **Connect to NansIS.** Choose or type the host (for example `postgres9.imr.no`, or
-   `localhost` for a copy on your computer), the port and database name, and your
-   username and password. The password is only used to open the connection and is
+1. **Connect to Nansis.** Type the name of your Nansis server (your database
+   administrator can give it to you), or choose `localhost` for a copy on your
+   computer. Then fill in the port and database name, and your username and password. The password is only used to open the connection and is
    cleared from the form straight away; it is never saved.
 2. **Choose surveys.** Set the vessel type digit (4 is the Dr. Fridtjof Nansen; other
    vessel types are not fully supported by rnansisclient yet), optionally pick
@@ -287,17 +287,17 @@ validation to every file.
    shown survey's XML** is blocked while it has errors, as in the Biotic XML tab;
    **Download all files (ZIP)** gives every XML with the validation findings, a
    manifest and rnansisclient's reports:
-   - `_missing_species.csv`: NansIS species codes not in rnansisclient's species map.
+   - `_missing_species.csv`: Nansis species codes not in rnansisclient's species map.
      Send it to the rnansisclient maintainer for the next annual update.
-   - `_code_collisions.csv`: one taxon recorded under two NansIS species codes.
+   - `_code_collisions.csv`: one taxon recorded under two Nansis species codes.
    - `_nansis_corrections.sql`: a script that would replace superseded species codes in
-     NansIS. It is a dry run that ends in `ROLLBACK`; nothing is changed unless someone
+     Nansis. It is a dry run that ends in `ROLLBACK`; nothing is changed unless someone
      edits it to `COMMIT` and runs it.
 
-The codes in the file come from rnansisclient's NansIS-to-NMD translation, not from the
+The codes in the file come from rnansisclient's Nansis-to-NMD translation, not from the
 Code lists tab; the validation still checks them against the active code lists.
 
-**Integrity checks.** The *Integrity* tab checks the NansIS data itself for the chosen
+**Integrity checks.** The *Integrity* tab checks the Nansis data itself for the chosen
 surveys: duplicate keys, codes missing from their lookup tables, orphan rows,
 impossible values, gear below the sea bed and more. It only reads the database. The
 results show per check, and **Download integrity report (ZIP)** gives a CSV per issue
@@ -422,9 +422,9 @@ the Nansen codes everywhere it is used.
 **Nation or area missing.** They have no default; set them under *Station defaults*
 (Fishstations) and in the NASC metadata.
 
-**"Connection failed" in the NansIS tab.** Check the host, port, database name,
+**"Connection failed" in the Nansis tab.** Check the host, port, database name,
 username and password. The message gives the database server's reason; a server inside
-the IMR network may only be reachable from there or over VPN.
+an institute's network may only be reachable from there or over VPN.
 
 # Validation checks {#sec-checks}
 

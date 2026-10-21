@@ -8,7 +8,7 @@ acoustic NASC. Part of the EAF-Nansen tool suite.
 |---|---|
 | BioData_To_Biotic.xls | Stations, catches, length-frequency and biology sheets → `Biotic.xlsx` |
 | Biotic.xls_To_Biotic.xml | `Biotic.xlsx` → `Biotic.xml` (NMDBiotic v3.1) |
-| Nansis2Biotic.xml | NansIS database → `Biotic.xml`, with rnansisclient's export and integrity checks |
+| Nansis2Biotic.xml | Nansis database → `Biotic.xml`, with rnansisclient's export and integrity checks |
 | NASC.xls_To_Acoustic.xml | Echoview NASC export → `Acoustic.xlsx` |
 | Acoustic.xls_To_Acoustic.xml | `Acoustic.xlsx` → Acoustic XML (NMD Echosounder v1) |
 | Code lists | Nansen (NMD reference) or custom code lists for every coded field |
