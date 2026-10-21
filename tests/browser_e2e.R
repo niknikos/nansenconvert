@@ -129,7 +129,7 @@ rows <- function(path, sheet = 1) tryCatch(nrow(readxl::read_excel(path, sheet =
 tpl <- function(f) file.path("data", f)
 
 # --- Splash ------------------------------------------------------------------
-invisible(b$Page$navigate(base))
+invisible(b$Page$navigate(base, timeout_ = 60))
 wait_for("!!document.getElementById('btn_launch_app')", what = "the splash screen")
 idle()
 shot("splash.png")
@@ -210,6 +210,21 @@ check("Biotic.xml is valid against NMDBiotic v3.1", nrow(validate_xml_schema(f_b
 rb <- readback_xml(f_bxml, "biotic")
 check("Biotic.xml reads back with RstoxData", !any(rb$severity == "error"),
       paste(unique(rb$message), collapse = "; "))
+
+# --- NansIS → Biotic.xml -----------------------------------------------------
+# Only the tab itself: a real export needs a NansIS database and its login
+cat("NansIS → Biotic.xml\n")
+tab("Nansis2Biotic.xml")
+n_regions <- js("Object.keys(($('#nansis-regions')[0] || {}).selectize ? $('#nansis-regions')[0].selectize.options : {}).length")
+n_checks <- js("document.querySelectorAll('#nansis-integrity_checks input[type=checkbox]').length")
+check("NansIS tab lists regions and integrity checks", n_regions > 0 && n_checks > 0,
+      sprintf("%d regions, %d checks", n_regions, n_checks))
+# The host must start empty, so this click cannot reach any database
+host <- js("$('#nansis-host')[0].selectize.getValue()")
+check("NansIS tab starts with no host chosen", identical(host, ""), sprintf("host '%s'", host))
+if (identical(host, "")) click("nansis-connect")
+check("NansIS tab asks for a host before connecting", grepl("host", text_of("nansis-connection_status")))
+shot("nansis.png")
 
 # --- NASC → Acoustic workbook ------------------------------------------------
 cat("NASC → Acoustic workbook\n")

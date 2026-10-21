@@ -212,6 +212,22 @@ biotic_tables_from_xml <- function(xml_path) {
        catchesamples = to_chr(x$catchsample), individuals = to_chr(x$individual))
 }
 
+#' All checks on an existing Biotic XML file: the schema, StoX's reader and
+#' the data checks. Used for uploaded files and for NansIS exports.
+validate_biotic_xml_file <- function(xml_path, lists = NULL) {
+  f_schema <- validate_xml_schema(xml_path, "biotic")
+  fc <- findings_collector()
+  tabs <- tryCatch(biotic_tables_from_xml(xml_path), error = function(e) e)
+  if (inherits(tabs, "error")) {
+    fc$add("error", "read-back", "READBACK_FAILED", "file", paste("StoX's reader could not read the file:", conditionMessage(tabs)))
+    return(rbind(fc$get(), f_schema))
+  }
+  fc$add("info", "read-back", "READBACK_OK", "file",
+         sprintf("Read by RstoxData: fishstation %d, catchsample %d, individual %d.",
+                 nrow(tabs$fishstations), nrow(tabs$catchesamples), nrow(tabs$individuals)))
+  rbind(validate_biotic(tabs, lists), f_schema, fc$get())
+}
+
 #' All Biotic checks. tables: missions, fishstations, catchesamples, individuals
 validate_biotic <- function(tables, lists = NULL, th = VALIDATION_THRESHOLDS, check_land = TRUE) {
   fc <- findings_collector()

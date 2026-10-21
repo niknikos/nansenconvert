@@ -19,6 +19,7 @@ library(shinyjs)
 app_files <- list(
   "BioData_To_Biotic.xls"        = "BioData_To_Biotic.xls.R",
   "Biotic.xls_To_Biotic.xml"     = "Biotic.xls_To_Biotic.xml.R",
+  "Nansis2Biotic.xml"            = "Nansis2Biotic.xml.R",
   "NASC.xls_To_Acoustic.xml"     = "NASC.xls_To_Acoustic.xml.R",
   "Acoustic.xls_To_Acoustic.xml" = "Acoustic.xls_To_Acoustic.xml.R"
 )
@@ -104,6 +105,7 @@ splash_ui <- tags$div(
       font-size: 0.9rem;
     }
     #app_splash .splash-modules b { color: #ffd166; }
+    #app_splash .splash-modules div:last-child:nth-child(odd) { grid-column: 1 / -1; }
     #app_splash #btn_launch_app {
       background: linear-gradient(135deg, #ffd166 0%, #f4a261 100%);
       color: #1a1a1a; border: none; font-weight: 700;
@@ -130,7 +132,8 @@ splash_ui <- tags$div(
       tags$div(tags$b("Field data"), " → Biotic.xlsx"),
       tags$div(tags$b("Biotic.xlsx"), " → Biotic.xml"),
       tags$div(tags$b("NASC"), " → Acoustic.xlsx"),
-      tags$div(tags$b("Acoustic.xlsx"), " → Acoustic.xml")
+      tags$div(tags$b("Acoustic.xlsx"), " → Acoustic.xml"),
+      tags$div(tags$b("NansIS database"), " → Biotic.xml")
     ),
     actionButton("btn_launch_app", "\U0001F680 Launch the application", class = "btn"),
     tags$p(class = "splash-desc", style = "margin: 22px 0 0 0; font-size: 0.82rem; opacity: 0.75;",
@@ -244,6 +247,7 @@ main_ui <- navbarPage(
   ),
   tabPanel("BioData_To_Biotic.xls",        apps[["BioData_To_Biotic.xls"]]$ui),
   tabPanel("Biotic.xls_To_Biotic.xml",     apps[["Biotic.xls_To_Biotic.xml"]]$ui),
+  tabPanel("Nansis2Biotic.xml",            apps[["Nansis2Biotic.xml"]]$ui),
   tabPanel("NASC.xls_To_Acoustic.xml",     apps[["NASC.xls_To_Acoustic.xml"]]$ui),
   tabPanel("Acoustic.xls_To_Acoustic.xml", apps[["Acoustic.xls_To_Acoustic.xml"]]$ui),
   tabPanel("Code lists", code_lists_ui("code_lists")),
