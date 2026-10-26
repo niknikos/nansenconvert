@@ -166,11 +166,70 @@ nasc <- nasc[, c("Interval", "Layer", "Region_ID", "PRC_NASC", "Date_S", "Time_S
                  "Species_percent", "Exclude_below_line_range_mean", "Exclude_below_line_range_max",
                  "Exclude_below_line_depth_min")]
 
+# --- Landing-site sheet (stock-assessment form: one row per measured fish) ---
+# Fictional sites and fish on the lake coast; written after every other draw
+# so the templates above do not change.
+ls_hdr <- c("SN\u00b0", "Village Nam/ Landing site ", "FISHING UNIT ID", "Sampling Date (dd-mm-yy)",
+  "Landing site Latitude (S)(DD) 4.8873\u00b0", "Landing site Longtude (S)(DD) 29.8873\u00b0", "Fishing Unit type",
+  "Number of Auxiliary Boats/Auxiliary Lamps attached to the fishing unit", "SOURCE OF LIGHT", "Number of lamps in a Unit",
+  "Total Watts of all Lamps(W)", "Mesh size of the net (mm)", "Fishing Net Width (m)", "Fishing Net Length (m)",
+  "Number of Hooks used in a Unit", "HOOK SIZE", "# of Hauls per Day", "Sailing hours to the Fishing Ground (Hr)",
+  "Time spent in fishing (hr)", "Number of days Fished in 7 days using same fishing unit type",
+  "Fishing Location Latitude (S)(DD) 4.8873\u00b0", "Fishing Location Longtude (S)(DD) 29.8873\u00b0",
+  "Sailing Direction (S,W,E,WS etc)", "Fishing ground", "Estimated Sailing Speed ( Engine powered 10 or 15 Km/h) (HL =5 Km/h)",
+  "Is Catch sorted? (YES/NO)", "Unsorted Total Catch of the day (Kg) ", "Total weight of adult  Lates stap.(Kg)",
+  "Total weight of juvenile  Lates stap.(Kg)", "Total weight of Stolothrissa tanganicae (Kg)",
+  "Total weight of Limnothrissa miodon (Kg)", "Total weight of OTHER SPECIES (Kg)",
+  "Total weight of Shrimps (Kg) ( caught in the same fishing net)",
+  "Species Measured (Lates stappersii, Stolothrissa tanganica, Limnothrissa miodon )", "Total Length (mm)", "Weight (g)",
+  "Sex", "MS", "Gonad Weight (gm)", "Gall Blader Length (mm)", "Basin", "Remarks")
+ls_sites <- data.frame(site = c("Site Alpha", "SITE BRAVO", "Site Charlie"), lat = c(5.21, 6.38, 7.92), lon = c(29.62, 29.84, 30.78),
+                       stringsAsFactors = FALSE)
+ls_sp <- data.frame(name = c("Lates stappersii", "Stolothrissa tanganicae", "Limnothrissa miodon"),
+                    len_mu = c(220, 80, 85), len_sd = c(60, 12, 14), a = c(0.0083, 0.0060, 0.0057), b = c(2.91, 3.04, 3.10),
+                    stringsAsFactors = FALSE)
+ls_units <- data.frame(site = rep(1:3, each = 3), unit = rep(1:3, 3), day = rep(c(1, 1, 2), 3),
+                       gear = c("LN", "HL", "RN", "LN", "RN", "HL", "LN", "GN", "HL"), stringsAsFactors = FALSE)
+ls_rows <- list()
+for (i in seq_len(nrow(ls_units))) {
+  u <- ls_units[i, ]; site <- ls_sites[u$site, ]
+  hl <- u$gear == "HL"
+  p_sp <- if (hl) c(0.9, 0.05, 0.05) else c(0.15, 0.55, 0.30)
+  n <- sample(15:25, 1)
+  sp <- sample(ls_sp$name, n, replace = TRUE, prob = p_sp)
+  k <- match(sp, ls_sp$name)
+  len <- round(pmax(25, rnorm(n, ls_sp$len_mu[k], ls_sp$len_sd[k])))
+  w <- round(ls_sp$a[k] * (len / 10)^ls_sp$b[k] * exp(rnorm(n, 0, 0.08)), 2)
+  w[sample(n, max(1, round(0.1 * n)))] <- NA                          # measured but not weighed
+  date <- as.Date("2026-03-31") + u$day
+  catch <- unname(sapply(ls_sp$name, function(nm) round(sum(w[sp == nm], na.rm = TRUE) / 1000 * runif(1, 2, 8), 1)))
+  fish_ok <- i != 5                                                    # one unit with no fishing location
+  df <- data.frame(
+    `SN\u00b0` = 1000 + i * 100 + seq_len(n), site = site$site, unit = u$unit,
+    date = if (i == 6) "2April2026" else as.character(as.numeric(date - as.Date("1899-12-30"))),
+    land_lat = site$lat, land_lon = site$lon, gear = u$gear, aux = 1,
+    light = if (u$gear == "LN") "LED" else NA, nlamps = if (u$gear == "LN") 12 else NA, watts = if (u$gear == "LN") 240 else NA,
+    mesh = if (hl) NA else 5, netw = if (hl) NA else 27, netl = if (hl) NA else 27, nhooks = if (hl) 300 else NA, hook = NA,
+    hauls = 1, sail = 1, fish_h = sample(c(4, 6, 10, 11), 1), days7 = 6,
+    fish_lat = if (fish_ok) round(site$lat + runif(1, -0.05, 0.05), 5) else NA,
+    fish_lon = if (fish_ok) round(site$lon - runif(1, 0.03, 0.15), 5) else NA,
+    dir = NA, ground = paste("Ground", u$site), speed = 10, sorted = "NO", unsorted = sum(catch),
+    lates_ad = if (i == 2) 0.5 else round(catch[1] * 0.8, 1), lates_juv = round(catch[1] * 0.2, 1),
+    stolo = catch[2], limno = catch[3], other = 0, shrimp = 0,
+    species = sp, tl = len, w = w, sex = sample(c("F", "M", "f", "-"), n, replace = TRUE, prob = c(0.4, 0.4, 0.1, 0.1)),
+    ms = sample(1:4, n, replace = TRUE), gonad = round(runif(n, 0.02, 0.5), 2), gb = NA, basin = NA,
+    remarks = if (i == 8) "Test fishing" else NA, stringsAsFactors = FALSE, check.names = FALSE)
+  names(df) <- ls_hdr
+  ls_rows[[i]] <- df
+}
+landings <- do.call(rbind, ls_rows)
+
 # --- Write ------------------------------------------------------------------
 writexl::write_xlsx(list(Stations = st),            file.path(out_dir, "Stations_model.xlsx"))
 writexl::write_xlsx(list(Catches = catches),        file.path(out_dir, "Catches_model.xlsx"))
 writexl::write_xlsx(list(Length_frequency = lengths), file.path(out_dir, "Length-frequency_model.xlsx"))
 writexl::write_xlsx(list(Biology = biology),        file.path(out_dir, "Biology_model.xlsx"))
 writexl::write_xlsx(list(NASC = nasc),              file.path(out_dir, "NASC_model.xlsx"))
-cat(sprintf("Synthetic templates written: %d stations, %d catch rows, %d lengths, %d biology rows, %d NASC rows\n",
-            nrow(st), nrow(catches), nrow(lengths), nrow(biology), nrow(nasc)))
+writexl::write_xlsx(list(Landings = landings),      file.path(out_dir, "Landings_model.xlsx"))
+cat(sprintf("Synthetic templates written: %d stations, %d catch rows, %d lengths, %d biology rows, %d NASC rows, %d landing-site rows\n",
+            nrow(st), nrow(catches), nrow(lengths), nrow(biology), nrow(nasc), nrow(landings)))
