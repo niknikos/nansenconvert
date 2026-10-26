@@ -5,6 +5,7 @@ excel_model_bases <- c(
   "Biology_model",
   "Catches_model",
   "Stations_model",
+  "Landings_model",
   "NASC_model"
 )
 
@@ -13,6 +14,7 @@ EXCEL_MODEL_LABELS <- c(
   "Biology (Biology_model)" = "Biology_model",
   "Catches (Catches_model)" = "Catches_model",
   "Stations (Stations_model)" = "Stations_model",
+  "Landing-site samples (Landings_model)" = "Landings_model",
   "NASC (NASC_model)" = "NASC_model"
 )
 

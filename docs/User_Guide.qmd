@@ -71,6 +71,7 @@ stored in a Nansis database go straight to `Biotic.xml`.
 | Tab | Input | Output |
 |---|---|---|
 | BioData_To_Biotic.xls | Stations, catches, length-frequency and biology sheets | `Biotic.xlsx` |
+| Landings_To_Biotic.xls | Landing-site sheet, one row per measured fish | `Biotic.xlsx` |
 | Biotic.xls_To_Biotic.xml | `Biotic.xlsx` | `Biotic.xml` |
 | Nansis2Biotic.xml | A Nansis database | `Biotic_<survey>.xml` |
 | NASC.xls_To_Acoustic.xml | Echoview NASC export | `Acoustic.xlsx` |
@@ -232,6 +233,54 @@ Individuals), check the **sample defaults** (`sampletype` 20, `lengthmeasurement
 **Combine the data**. **Download Biotic** saves `Biotic.xlsx` with the four sheets
 `missions`, `fishstations`, `catchesamples` and `individuals`. The preview tabs show
 each sheet; you can also edit the workbook in Excel before the next step.
+
+# Landing-site samples → Biotic workbook {#sec-landings}
+
+Use the **Landings_To_Biotic.xls** tab when the biology comes from catches sampled at
+landing sites instead of from a research vessel, as in the Lake Tanganyika stock
+assessment sheet: one row per measured fish, with the sampling information (landing
+site, fishing unit, date, gear, positions, catch weights per species) repeated on every
+row. The *Landing-site samples* template shows the layout. The tab reads the first sheet and finds
+each column by its header text, so the order does not matter and small differences in
+the wording do not either; it tells you which columns it did not find.
+
+1. **Browse** to the sheet. The tab reports how many of the expected columns it
+   recognised, and lists one gear box for every gear code in the sheet.
+2. Fill in the **mission** (nation, mission type, platform, cruise). There is no vessel,
+   so the platform code `9999` is a placeholder until one is agreed.
+3. Check the **stations and gear** settings. The sheet gives no time of day, but StoX
+   needs a date-time, so every station gets a nominal time (12:00 by default). The NMD
+   gear list has no code for lift nets, ring nets, or hooks and lines; the default
+   custom codes 9101–9104 can be replaced by national ones. Rows whose remark says
+   "Test fishing" get the station type for identifying acoustic targets (11), the others
+   type 9.
+4. Click **Convert**. The *Summary* tab lists what was done, and the other tabs show the
+   stations, catch samples, fish, dropped stations and the length-weight fits.
+5. **Download Biotic.xlsx** and open it in the Biotic.xls_To_Biotic.xml tab
+   (@sec-bioticxml), which builds the XML and runs the schema and StoX checks.
+   **Download the conversion report (ZIP)** has the dropped stations, which sheet row
+   each station came from, the catch adjustments, the length-weight fits and the notes.
+
+What the conversion does:
+
+- **Stations.** Consecutive rows with the same sampling information form one station.
+  Dates written as text (`7April2026`) are read, and a few mistyped years are put right.
+  A station with no date, or with no usable position, is left out and listed.
+- **Positions.** The fishing location is used when it is inside the lake. When it is
+  missing or not credible (swapped latitude and longitude are put right; one more than
+  60 km from its landing site is not used), the position of its fishing ground, then of
+  its landing site, is used. Each station's comment says which.
+- **Catch samples.** One per station and species (Lates stappersii, Stolothrissa
+  tanganicae, Limnothrissa miodon; adult and juvenile Lates are added). Other species are
+  not converted. Fish measured but not weighed get a weight predicted from the species'
+  length-weight fit, so every sample can be raised to its catch. Where the reported catch
+  is below the measured weight, or missing, the catch weight is set to the measured
+  weight; both are noted in the catch sample's comment.
+- **Fish.** Lengths go from mm to m and weights from g to kg. The maturity stage is
+  kept as text in the fish's comment (`MS=3`) and is not translated to an NMD stage.
+
+The *Validation* tab runs the data checks on the converted tables. A station on land
+cannot be judged for a lake, so that check is off unless you tick it.
 
 # Biotic workbook → Biotic.xml {#sec-bioticxml}
 
@@ -400,6 +449,7 @@ converter without real data and see the expected columns:
 ```{r}
 #| results: asis
 cat(template_cols, sep = "\n")
+cat("- **Landings_model.xlsx**: the 42 columns of the landing-site stock-assessment form, from the landing site, fishing unit, date and gear to the catch weights per species and the species, length, weight, sex and maturity of each fish (fictional sites and fish)\n")
 ```
 
 # Common problems

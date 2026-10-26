@@ -18,6 +18,7 @@ library(shinyjs)
 # Each entry's name is the application's name and is used as its tab label.
 app_files <- list(
   "BioData_To_Biotic.xls"        = "BioData_To_Biotic.xls.R",
+  "Landings_To_Biotic.xls"       = "Landings_To_Biotic.xls.R",
   "Biotic.xls_To_Biotic.xml"     = "Biotic.xls_To_Biotic.xml.R",
   "Nansis2Biotic.xml"            = "Nansis2Biotic.xml.R",
   "NASC.xls_To_Acoustic.xml"     = "NASC.xls_To_Acoustic.xml.R",
@@ -130,6 +131,7 @@ splash_ui <- tags$div(
       "Converts survey data to the NMD Biotic and Echosounder XML formats used by StoX."),
     tags$div(class = "splash-modules",
       tags$div(tags$b("Field data"), " → Biotic.xlsx"),
+      tags$div(tags$b("Landing-site samples"), " → Biotic.xlsx"),
       tags$div(tags$b("Biotic.xlsx"), " → Biotic.xml"),
       tags$div(tags$b("NASC"), " → Acoustic.xlsx"),
       tags$div(tags$b("Acoustic.xlsx"), " → Acoustic.xml"),
@@ -246,6 +248,7 @@ main_ui <- navbarPage(
     "))
   ),
   tabPanel("BioData_To_Biotic.xls",        apps[["BioData_To_Biotic.xls"]]$ui),
+  tabPanel("Landings_To_Biotic.xls",       apps[["Landings_To_Biotic.xls"]]$ui),
   tabPanel("Biotic.xls_To_Biotic.xml",     apps[["Biotic.xls_To_Biotic.xml"]]$ui),
   tabPanel("Nansis2Biotic.xml",            apps[["Nansis2Biotic.xml"]]$ui),
   tabPanel("NASC.xls_To_Acoustic.xml",     apps[["NASC.xls_To_Acoustic.xml"]]$ui),
